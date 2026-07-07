@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Tabletop-at-candlelight: dark wood, parchment, ember glow. */
+  --background: #17120c;
+  --foreground: #f5e9d0;
 }
 
 @theme inline {
@@ -12,15 +13,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
+  background:
+    radial-gradient(ellipse at 50% -20%, rgba(180, 110, 30, 0.12), transparent 60%),
+    var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Georgia, serif;
 }

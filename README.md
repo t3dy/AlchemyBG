@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ⚗️ The Alchemist's Lab
 
-## Getting Started
+A solo worker-placement board game of early modern alchemy, played in the browser.
+Run the laboratory, gather and distill, brew potions and medicines, survive an
+escalating ladder of historically real lab disasters — mercury vapor, aqua fortis,
+a crucible full of molten lead — and keep your two alchemists alive long enough to
+attempt the Grand Experiment.
 
-First, run the development server:
+Built with Next.js (App Router) + TypeScript + Tailwind. The rules live in a pure,
+seeded, fully-tested engine (`src/lib/game/`), so every game is a deterministic
+replay of its seed — which powers the `/api/daily` shared daily challenge.
+
+## Play locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev     # http://localhost:3000
+npm test        # engine rules + balance gate
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Deploy
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Push to GitHub and import into [Vercel](https://vercel.com/new) — zero config, no
+environment variables. The daily-challenge API route runs serverless.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Design
 
-## Learn More
+The game distills two years of design conversations (2024–2026): a worker-placement
+engine-builder where Agricola's harvest is replaced by disaster, and the central
+tension is productivity versus safety investment. Design bible in `docs/DESIGN.md`;
+current slice scope in `docs/VERTICAL_SLICE.md`.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+No magic: everything in the game — apparatus, ingredients, accidents, cures — is
+drawn from the real material culture of early modern alchemy.
