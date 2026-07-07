@@ -111,6 +111,7 @@ export interface GameState {
 }
 
 export type GameAction =
+  | { type: "buildTile"; workerId: string; tileId: FurnitureId }
   | { type: "placeWorker"; workerId: string; tileId: FurnitureId; recipe?: RecipeId }
   | { type: "unplaceWorker"; workerId: string }
   | { type: "confirmPlacement" }                 // run production, reveal disaster

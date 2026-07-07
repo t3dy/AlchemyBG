@@ -21,7 +21,19 @@ lab heal them; goldmaking means what was really possible (false gold, gilding).
 
 ## The solo ruleset (current slice — from the Feb 2026 spec)
 
-- **10 rounds**, 2 alchemists. **Win at 12 VP; lose if both die.**
+- **The board starts EMPTY.** Each round a worker may **build** one tile (paying its
+  gold/metal cost, which consumes the worker's action) or **operate** a built tile.
+  The opening is a gold-allocation puzzle; with only 2 workers and up to 6 tiles,
+  every round forces a real choice. Build order is the primary strategic axis, and the
+  four archetypes (production / distillation / research / safety) are tuned to
+  near-parity — see `BALANCE_MODEL.md` §6.
+- **Alchemists** are drawn from the AlchemyTimelineMap scholarly database (Zosimos,
+  Jabir, al-Razi, al-Kindi, Gerard, Roger Bacon, Paracelsus, Tycho, Maier). No
+  legendary figures (no Flamel/Perenelle), and tile flavor cites real scholarship/
+  archaeology rather than the invented "quotations" of the 2024 brainstorm.
+- **10 rounds**, 2 alchemists. **Win at 8 VP; lose if both die.** (Lowered from 12: the
+  build-up phase costs worker-rounds, so the single-crucible economy caps lower — 8 is
+  the tension point where competent play wins ~40-57% across seeds.)
 - Round loop: **Placement → Production → Disaster → Healing → Upkeep.**
 - VP: 1/Potion, 2/Advanced Potion, 1/research upgrade, +4 Grand Experiment success,
   +1 Illuminated worker, −1 per dead worker.

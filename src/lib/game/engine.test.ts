@@ -7,6 +7,13 @@ function play(state: GameState, ...actions: GameAction[]): GameState {
   return actions.reduce(reduce, state);
 }
 
+/** White-box helper: a fresh game with the given tiles already on the board. */
+function withTiles(seed: number, ...tiles: GameState["furniture"]): GameState {
+  const s = newGame(seed);
+  s.furniture.push(...tiles);
+  return s;
+}
+
 /** Advance through a full round with both workers gathering, always preventing if possible. */
 function playSafeRound(state: GameState): GameState {
   let s = state;
@@ -44,7 +51,7 @@ describe("setup", () => {
     expect(s.workers).toHaveLength(2);
     expect(s.workers.every((w) => w.health === "healthy")).toBe(true);
     expect(s.resources).toEqual(STARTING_RESOURCES);
-    expect(s.furniture).toEqual(["crucible", "alembic", "workbench", "researchDesk", "fumeHood"]);
+    expect(s.furniture).toEqual([]); // empty board — everything must be built
     expect(s.disasterDeck).toHaveLength(MAX_ROUNDS);
   });
 
@@ -69,7 +76,7 @@ describe("setup", () => {
 
 describe("placement and production", () => {
   it("workbench yields 3 ingredients, alembic yields 2 metals + 1 gold", () => {
-    let s = newGame(1);
+    let s = withTiles(1, "workbench", "alembic");
     s = play(
       s,
       { type: "placeWorker", workerId: "w1", tileId: "workbench" },
@@ -82,7 +89,7 @@ describe("placement and production", () => {
   });
 
   it("rejects two workers on one tile and placement on passive tiles", () => {
-    let s = newGame(1);
+    let s = withTiles(1, "workbench", "fumeHood");
     s = reduce(s, { type: "placeWorker", workerId: "w1", tileId: "workbench" });
     const blocked = reduce(s, { type: "placeWorker", workerId: "w2", tileId: "workbench" });
     expect(blocked.workers.find((w) => w.id === "w2")!.placedOn).toBeNull();
@@ -91,7 +98,7 @@ describe("placement and production", () => {
   });
 
   it("brews a potion at the crucible for 2 ingredients + 1 metal", () => {
-    let s = newGame(1);
+    let s = withTiles(1, "crucible");
     s = play(
       s,
       { type: "placeWorker", workerId: "w1", tileId: "crucible", recipe: "potion" },
@@ -103,14 +110,13 @@ describe("placement and production", () => {
   });
 
   it("research unlocks the track in order and adds tiles + VP", () => {
-    let s = newGame(1);
+    let s = withTiles(1, "researchDesk");
     s = play(
       s,
       { type: "placeWorker", workerId: "w1", tileId: "researchDesk" },
       { type: "confirmPlacement" },
     );
-    expect(s.upgrades).toEqual(["safetyShower"]);
-    expect(s.furniture).toContain("safetyShower");
+    expect(s.upgrades).toEqual(["advancedDistillation"]);
     expect(computeVp(s)).toBeGreaterThanOrEqual(1);
   });
 });
@@ -141,7 +147,7 @@ describe("disasters", () => {
   it("accepting the consequences is never skippable — the effect applies", () => {
     // Find a seed whose round-1 card targets a worker, then verify harm lands.
     for (let seed = 1; seed < 50; seed++) {
-      let s = newGame(seed);
+      let s = withTiles(seed, "workbench");
       s = play(
         s,
         { type: "placeWorker", workerId: "w1", tileId: "workbench" },
@@ -159,7 +165,7 @@ describe("disasters", () => {
 
   it("the fume hood negates the first sickening each round", () => {
     for (let seed = 1; seed < 80; seed++) {
-      let s = newGame(seed);
+      let s = withTiles(seed, "workbench", "fumeHood");
       s = play(
         s,
         { type: "placeWorker", workerId: "w1", tileId: "workbench" },
@@ -213,65 +219,15 @@ describe("full playthrough", () => {
     expect(s.log.length).toBeGreaterThan(10);
   });
 
-  it("winning is achievable: a potion-focused bot wins on some seeds", () => {
+  it("winning is achievable but not trivial (competent build-and-operate bot)", async () => {
+    const { simulateArchetype } = await import("./balance");
     let wins = 0;
     for (let seed = 1; seed <= 40; seed++) {
-      let s = newGame(seed);
-      let guard = 0;
-      while (s.phase !== "gameOver" && guard++ < 50) {
-        // Priority: grand experiment > brew advanced potion > potion > medicine when low > research > gather.
-        const free = () => s.workers.filter((w) => canWork(w) && w.placedOn === null);
-        if (s.round >= 9 && !s.grandAttempted) {
-          const gw = s.workers.find((w) => w.health === "healthy" && w.placedOn === null && !w.exhausted);
-          if (gw && s.resources.potions >= 1 && s.resources.metals >= 2 && s.resources.gold >= 1) {
-            s = reduce(s, { type: "attemptGrandExperiment", workerId: gw.id });
-          }
-        }
-        let f = free();
-        if (f[0]) {
-          if (s.resources.potions >= 1 && s.resources.metals >= 1) {
-            s = reduce(s, { type: "placeWorker", workerId: f[0].id, tileId: "crucible", recipe: "advancedPotion" });
-          } else if (s.resources.ingredients >= 2 && s.resources.metals >= 1) {
-            s = reduce(s, { type: "placeWorker", workerId: f[0].id, tileId: "crucible", recipe: "potion" });
-          } else if (s.resources.medicine === 0 && s.resources.ingredients >= 1 && s.resources.gold >= 1) {
-            s = reduce(s, { type: "placeWorker", workerId: f[0].id, tileId: "crucible", recipe: "medicine" });
-          } else {
-            s = reduce(s, { type: "placeWorker", workerId: f[0].id, tileId: "workbench" });
-          }
-        }
-        f = free();
-        if (f[0]) {
-          if (s.upgrades.length < 3 && s.resources.ingredients >= 3) {
-            s = reduce(s, { type: "placeWorker", workerId: f[0].id, tileId: "researchDesk" });
-          } else {
-            const tile = s.workers.some((w) => w.placedOn === "workbench") ? "alembic" : "workbench";
-            s = reduce(s, { type: "placeWorker", workerId: f[0].id, tileId: tile });
-          }
-        }
-        s = reduce(s, { type: "confirmPlacement" });
-        if (s.phase === "disaster") {
-          s = reduce(s, { type: "resolveDisaster", prevent: s.pendingDisaster?.canPrevent ?? false });
-        }
-        let healed = true;
-        while (s.phase === "healing" && healed) {
-          healed = false;
-          for (const w of s.workers) {
-            if (w.health === "critical" || w.health === "injured") {
-              const next = reduce(s, { type: "healWorker", workerId: w.id });
-              if (next !== s) {
-                s = next;
-                healed = true;
-                break;
-              }
-            }
-          }
-        }
-        if (s.phase === "healing") s = reduce(s, { type: "endHealing" });
-      }
-      if (s.outcome === "won") wins++;
+      if (simulateArchetype(seed, "production") >= WIN_VP) wins++;
     }
-    // Balance gate: the game must be winnable but not trivial.
-    expect(wins).toBeGreaterThan(0);
+    // The game must be winnable by good play, but luck of the disaster deck must
+    // still cost some games — never a solved 100%.
+    expect(wins).toBeGreaterThan(4);
     expect(wins).toBeLessThan(40);
   });
 
@@ -285,5 +241,65 @@ describe("full playthrough", () => {
     s.workers[1].health = "dead";
     // 3 + 4 + 2 + 4 + 1 - 1 = 13
     expect(computeVp(s)).toBe(13);
+  });
+});
+
+describe("balance model", () => {
+  it("shadow prices are sane and prevention ratios create real decisions", async () => {
+    const { solveShadowPrices, analyzePreventions, grandExperimentEv } = await import("./balance");
+    const p = solveShadowPrices();
+    expect(p.wage).toBeGreaterThan(0.4);
+    expect(p.wage).toBeLessThan(1);
+    expect(p.ingredients).toBeGreaterThan(0);
+    expect(p.gold).toBeGreaterThan(p.metals); // alembic is a gold engine
+    for (const a of analyzePreventions()) {
+      expect(a.ratio, `${a.name} ratio ${a.ratio.toFixed(2)} out of band`).toBeGreaterThan(0.15);
+      expect(a.ratio, `${a.name} ratio ${a.ratio.toFixed(2)} out of band`).toBeLessThan(1.3);
+    }
+    const ev = grandExperimentEv();
+    expect(ev).toBeGreaterThan(0); // worth attempting...
+    expect(ev).toBeLessThan(1.5); // ...but a gamble, not free VP
+  });
+
+  it("draws two distinct roster alchemists per game, seeded", async () => {
+    const { WORKER_ROSTER } = await import("./data");
+    const names = new Set(WORKER_ROSTER.map((w) => w.name));
+    const s = newGame(99);
+    expect(s.workers).toHaveLength(2);
+    expect(names.has(s.workers[0].name)).toBe(true);
+    expect(names.has(s.workers[1].name)).toBe(true);
+    expect(s.workers[0].name).not.toBe(s.workers[1].name);
+    expect(newGame(99).workers.map((w) => w.name)).toEqual(s.workers.map((w) => w.name));
+  });
+});
+
+describe("strategy parity (empty-board build orders)", () => {
+  it("starts with an empty board", () => {
+    expect(newGame(1).furniture).toEqual([]);
+  });
+
+  it("a worker can build a tile, paying its cost and spending its action", async () => {
+    const { BUILD_COST } = await import("./data");
+    let s = newGame(1);
+    const goldBefore = s.resources.gold;
+    s = reduce(s, { type: "buildTile", workerId: "w1", tileId: "workbench" });
+    expect(s.furniture).toContain("workbench");
+    expect(s.resources.gold).toBe(goldBefore - (BUILD_COST.workbench.gold ?? 0));
+    expect(s.workers.find((w) => w.id === "w1")!.exhausted).toBe(true);
+    // A spent worker cannot also operate.
+    const blocked = reduce(s, { type: "placeWorker", workerId: "w1", tileId: "workbench" });
+    expect(blocked.workers.find((w) => w.id === "w1")!.placedOn).toBeNull();
+  });
+
+  it("no build order dominates: median VP spread across archetypes stays tight", async () => {
+    const { strategyParity } = await import("./balance");
+    const report = strategyParity(60);
+    // Every archetype must be viable (reach a respectable score) and none runaway.
+    for (const [arch, r] of Object.entries(report.perArchetype)) {
+      expect(r.median, `${arch} median ${r.median}`).toBeGreaterThanOrEqual(5);
+      expect(r.winRate, `${arch} winRate ${r.winRate}`).toBeLessThan(0.85); // never solved
+    }
+    // The parity guarantee: best and worst archetype medians within 3 VP.
+    expect(report.spread, `spread ${report.spread}`).toBeLessThanOrEqual(3);
   });
 });

@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  BASE_BUILDABLE,
+  BUILD_COST,
   FURNITURE,
   GRAND_TRANSMUTATION_ROUND,
   MAX_ROUNDS,
@@ -41,7 +43,7 @@ const PHASE_META: Record<string, { label: string; color: string; hint: string }>
   placement: {
     label: "Placement",
     color: "bg-sky-900/60 border-sky-700 text-sky-200",
-    hint: "Select an alchemist, then a station. Confirm to run production.",
+    hint: "Select an alchemist, then build a new tile (dashed) or operate one you own. Confirm to run production.",
   },
   disaster: {
     label: "Disaster",
@@ -112,12 +114,31 @@ export default function Game() {
 
   function onTileClick(tileId: FurnitureId) {
     if (s.phase !== "placement" || !selectedWorker) return;
+    // Unbuilt tile → construct it; built active tile → operate it.
+    if (!s.furniture.includes(tileId)) {
+      dispatchAndClear({ type: "buildTile", workerId: selectedWorker, tileId });
+      setSelectedWorker(null);
+      return;
+    }
     if (tileId === "crucible") {
       setRecipePickerOpen(true);
       return;
     }
     dispatchAndClear({ type: "placeWorker", workerId: selectedWorker, tileId });
     setSelectedWorker(null);
+  }
+
+  // All tiles that can appear on the board: the buildable base plus any research-
+  // granted tiles already unlocked. Deduped, stable order.
+  const boardTiles: FurnitureId[] = [
+    ...BASE_BUILDABLE,
+    ...s.furniture.filter((f) => !BASE_BUILDABLE.includes(f)),
+  ];
+
+  function buildCostText(tileId: FurnitureId): string {
+    const cost = BUILD_COST[tileId];
+    const parts = RESOURCE_META.filter((m) => cost[m.key]).map((m) => `${cost[m.key]}${m.emoji}`);
+    return parts.length ? parts.join(" + ") : "free";
   }
 
   function onRecipePick(recipe: RecipeId) {
@@ -263,30 +284,48 @@ export default function Game() {
               Laboratory
             </h2>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-              {s.furniture.map((fid) => {
+              {boardTiles.map((fid) => {
                 const tile = FURNITURE.find((f) => f.id === fid)!;
+                const built = s.furniture.includes(fid);
                 const broken = s.brokenFurniture[fid] !== undefined;
                 const occupant = s.workers.find((w) => w.placedOn === fid);
-                const targetable =
-                  s.phase === "placement" && selectedWorker !== null && !tile.passive && !broken && !occupant;
+                const canBuildNow =
+                  s.phase === "placement" &&
+                  selectedWorker !== null &&
+                  !built &&
+                  canAfford(s.resources, BUILD_COST[fid]);
+                const canOperate =
+                  s.phase === "placement" && selectedWorker !== null && built && !tile.passive && !broken && !occupant;
+                const targetable = canBuildNow || canOperate;
                 return (
                   <div key={fid} className="relative">
                     <button
                       onClick={() => onTileClick(fid)}
                       disabled={!targetable}
                       className={`flex h-full w-full flex-col gap-1 rounded-xl border-2 p-3 text-left transition ${
-                        broken
-                          ? "border-red-900 bg-red-950/40 opacity-60"
-                          : tile.passive
-                            ? "border-stone-700 bg-stone-950/60"
-                            : "border-amber-800/70 bg-stone-950"
-                      } ${targetable ? "cursor-pointer ring-1 ring-sky-500/60 hover:bg-sky-950/40" : ""}`}
+                        !built
+                          ? "border-dashed border-stone-600 bg-stone-950/40 opacity-90"
+                          : broken
+                            ? "border-red-900 bg-red-950/40 opacity-60"
+                            : tile.passive
+                              ? "border-stone-700 bg-stone-950/60"
+                              : "border-amber-800/70 bg-stone-950"
+                      } ${canBuildNow ? "cursor-pointer ring-1 ring-emerald-500/60 hover:bg-emerald-950/30" : ""} ${
+                        canOperate ? "cursor-pointer ring-1 ring-sky-500/60 hover:bg-sky-950/40" : ""
+                      }`}
                     >
                       <div className="flex items-center gap-2">
-                        <span className="text-2xl">{tile.emoji}</span>
-                        <span className="font-serif font-semibold text-amber-100">{tile.name}</span>
+                        <span className={`text-2xl ${!built ? "grayscale" : ""}`}>{tile.emoji}</span>
+                        <span className={`font-serif font-semibold ${built ? "text-amber-100" : "text-stone-400"}`}>
+                          {tile.name}
+                        </span>
+                        {!built && (
+                          <span className="ml-auto rounded border border-emerald-800 bg-emerald-950/60 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">
+                            build {buildCostText(fid)}
+                          </span>
+                        )}
                         {broken && <span className="text-xs font-bold text-red-400">BROKEN</span>}
-                        {tile.passive && <span className="text-[10px] uppercase text-stone-500">passive</span>}
+                        {built && tile.passive && <span className="text-[10px] uppercase text-stone-500">passive</span>}
                       </div>
                       <p className="text-xs text-stone-300">{tile.description}</p>
                       <p className="mt-auto text-[11px] italic text-stone-500">

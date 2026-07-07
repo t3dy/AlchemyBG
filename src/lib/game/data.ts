@@ -1,16 +1,109 @@
-import type { DisasterCard, FurnitureTile, ResearchUpgrade, Resources } from "./types";
+import type { DisasterCard, FurnitureId, FurnitureTile, ResearchUpgrade, Resources } from "./types";
 
 export const MAX_ROUNDS = 10;
-export const WIN_VP = 12;
+export const WIN_VP = 8;
 export const GRAND_TRANSMUTATION_ROUND = 9;
 
+// Historically documented alchemists, drawn from the AlchemyTimelineMap database
+// (C:\Dev\ALCHEMYTIMELINEMAP\data\seed_data.json — all SCHOLARSHIP_BASED entries).
+// Two are drawn per game. Pairings across eras are a game convention, not a claim.
+export interface WorkerPersona {
+  slug: string; // AlchemyTimelineMap person slug
+  name: string;
+  era: string;
+  bio: string;
+}
+
+export const WORKER_ROSTER: WorkerPersona[] = [
+  {
+    slug: "zosimos-of-panopolis",
+    name: "Zosimos",
+    era: "Late Antique",
+    bio: "Zosimos of Panopolis, 3rd c. — earliest systematic alchemical writer; craft practice meets Greek philosophy.",
+  },
+  {
+    slug: "jabir-ibn-hayyan",
+    name: "Jabir",
+    era: "Medieval",
+    bio: "Jabir ibn Hayyan, 8th–9th c. — corpus that shaped practical chemistry for a millennium; the Latin West's 'Geber'.",
+  },
+  {
+    slug: "al-razi",
+    name: "al-Razi",
+    era: "Medieval",
+    bio: "al-Razi, 9th–10th c. — Persian physician-alchemist; advanced systematic distillation and metallurgical work.",
+  },
+  {
+    slug: "al-kindi",
+    name: "al-Kindi",
+    era: "Medieval",
+    bio: "al-Kindi, 9th c. — Baghdad philosopher and polymath who engaged alchemy critically.",
+  },
+  {
+    slug: "gerard-of-cremona",
+    name: "Gerard",
+    era: "Medieval",
+    bio: "Gerard of Cremona, 12th c. — Toledo translator who carried Arabic alchemical treatises into Latin.",
+  },
+  {
+    slug: "roger-bacon",
+    name: "Roger Bacon",
+    era: "Medieval",
+    bio: "Roger Bacon, 13th c. — English Franciscan natural philosopher engaged with alchemy and experiment.",
+  },
+  {
+    slug: "paracelsus",
+    name: "Paracelsus",
+    era: "Early Modern",
+    bio: "Paracelsus, 1493–1541 — Swiss physician; pioneered medical alchemy and pharmaceutical preparation.",
+  },
+  {
+    slug: "tycho-brahe",
+    name: "Tycho",
+    era: "Early Modern",
+    bio: "Tycho Brahe, 1546–1601 — ran the Uraniborg laboratory; medicamenta tria rather than transmutation.",
+  },
+  {
+    slug: "michael-maier",
+    name: "Maier",
+    era: "Early Modern",
+    bio: "Michael Maier, 1568–1622 — German court physician and alchemist; author of Atalanta Fugiens.",
+  },
+];
+
+// The board starts EMPTY. Openings are gold-allocation puzzles: this stock buys
+// two cheap tiles, or one expensive tile plus operating capital.
 export const STARTING_RESOURCES: Resources = {
   ingredients: 4,
-  metals: 2,
-  gold: 2,
-  medicine: 1,
+  metals: 3,
+  gold: 8,
+  medicine: 3,
   potions: 0,
   advancedPotions: 0,
+};
+
+// The five tiles a player can construct directly onto their empty board. The two
+// safety tiles (safetyShower, neutralizationStation) are NOT here — they are earned
+// down the Research Desk tech path, keeping research a distinct strategic lane.
+export const BASE_BUILDABLE: FurnitureId[] = [
+  "workbench",
+  "alembic",
+  "crucible",
+  "researchDesk",
+  "fumeHood",
+];
+
+// Build costs, priced by the shadow-price model (docs/BALANCE_MODEL.md) so that no
+// single opening dominates: cheap tiles pay off slowly, dear tiles pay off faster.
+export const BUILD_COST: Record<FurnitureId, Partial<Resources>> = {
+  workbench: { gold: 1 },
+  fumeHood: { gold: 2 },
+  crucible: { gold: 2, metals: 1 },
+  alembic: { gold: 2 },
+  researchDesk: { gold: 2 },
+  // Safety tiles are placed for free the instant their research completes.
+  safetyShower: {},
+  neutralizationStation: {},
 };
 
 export interface Recipe {
@@ -56,8 +149,9 @@ export const FURNITURE: FurnitureTile[] = [
     emoji: "🔥",
     description: "Brew a recipe: Potion (2🌿+1⛏️), Medicine (1🌿+1🪙), or Advanced Potion (1🧪+1⛏️).",
     passive: false,
-    flavor: "The crucible is the forge where all things are tried and tested.",
-    flavorSource: "Paracelsus",
+    flavor:
+      "Hessian crucibles, fired above 1,300°C, unknowingly synthesized mullite — world-renowned resistance to thermal shock.",
+    flavorSource: "UCL/Cardiff crucible archaeology",
   },
   {
     id: "alembic",
@@ -65,8 +159,9 @@ export const FURNITURE: FurnitureTile[] = [
     emoji: "⚗️",
     description: "Distill: gain 2 Metals and 1 Gold (sickened: 1 Metal, no Gold). Advanced Distillation adds +1 Metal.",
     passive: false,
-    flavor: "Let the cooling of the metal temper the heat of the alchemist's toil.",
-    flavorSource: "Al-Kindi",
+    flavor:
+      "Separating the volatile from the fixed by heat and condensation, in alembic and cucurbit — the central operation of the art.",
+    flavorSource: "distillation, AlchemyTimelineMap",
   },
   {
     id: "workbench",
@@ -74,8 +169,9 @@ export const FURNITURE: FurnitureTile[] = [
     emoji: "🪑",
     description: "Gather: gain 3 Ingredients (2 if the worker is sickened).",
     passive: false,
-    flavor: "In the crucible of our labors, wisdom is born of practice.",
-    flavorSource: "Nicholas Flamel",
+    flavor:
+      "Knowledge resident in hands and senses: craft mastery the treatises could not fully write down.",
+    flavorSource: "artisanal epistemology (P. Smith)",
   },
   {
     id: "researchDesk",
@@ -83,8 +179,9 @@ export const FURNITURE: FurnitureTile[] = [
     emoji: "📜",
     description: "Research: pay 1 Ingredient to unlock the next upgrade (+1 VP each).",
     passive: false,
-    flavor: "From the desk of the scholar, insights into the mysteries of nature emerge.",
-    flavorSource: "Albertus Magnus",
+    flavor:
+      "In Toledo, Gerard of Cremona turned Arabic treatises on distillation and acids into Latin — and Europe's labs changed.",
+    flavorSource: "translation movement, 12th c.",
   },
   {
     id: "fumeHood",
@@ -92,8 +189,9 @@ export const FURNITURE: FurnitureTile[] = [
     emoji: "🌬️",
     description: "Passive: negates the first sickening effect each round.",
     passive: true,
-    flavor: "In the clear air of the fume hood, the alchemist's spirit may thrive untainted.",
-    flavorSource: "Hermes Trismegistus",
+    flavor:
+      "Excavated glass and crucibles from Tycho's Uraniborg lab carry mercury and lead — the air of the workshop was not kind.",
+    flavorSource: "Uraniborg excavation, 1988–90",
   },
   {
     id: "safetyShower",
@@ -101,8 +199,9 @@ export const FURNITURE: FurnitureTile[] = [
     emoji: "🚿",
     description: "Passive: one free healing step each round during the Healing phase.",
     passive: true,
-    flavor: "Let the cleansing waters wash away the marks of our follies.",
-    flavorSource: "Roger Bacon",
+    flavor:
+      "Operational chemistry was empirically successful — and empirically dangerous. Recovery was part of the craft.",
+    flavorSource: "operational chemistry, AlchemyTimelineMap",
   },
   {
     id: "neutralizationStation",
@@ -110,12 +209,21 @@ export const FURNITURE: FurnitureTile[] = [
     emoji: "🧂",
     description: "Passive: cancel one acid disaster entirely, once per game.",
     passive: true,
-    flavor: "The alchemist's art is not just in creation but in the remedy of its missteps.",
-    flavorSource: "Theophrastus",
+    flavor:
+      "Acid production reached the Latin West through translated Arabic treatises; so did the means of taming it.",
+    flavorSource: "Gerard of Cremona transmission",
   },
 ];
 
+// Ordered so research pays off economically FIRST (Advanced Distillation), making a
+// research-led opening a real engine choice rather than a purely defensive one.
 export const RESEARCH_TRACK: ResearchUpgrade[] = [
+  {
+    id: "advancedDistillation",
+    name: "Advanced Distillation",
+    emoji: "⚗️",
+    description: "The Alembic yields +1 Metal.",
+  },
   {
     id: "safetyShower",
     name: "Safety Shower",
@@ -127,12 +235,6 @@ export const RESEARCH_TRACK: ResearchUpgrade[] = [
     name: "Neutralization Station",
     emoji: "🧂",
     description: "Adds the Neutralization Station: cancel one acid disaster per game.",
-  },
-  {
-    id: "advancedDistillation",
-    name: "Advanced Distillation",
-    emoji: "⚗️",
-    description: "The Alembic yields +1 Metal.",
   },
 ];
 
@@ -169,8 +271,8 @@ export const DISASTERS: DisasterCard[] = [
     emoji: "🩹",
     severity: "minor",
     effectText: "Tainted stores: lose 2 Ingredients.",
-    preventionText: "Line the vessels: pay 1 Metal.",
-    preventionCost: { metals: 1 },
+    preventionText: "Line the vessels: pay 2 Metals.",
+    preventionCost: { metals: 2 },
     flavor: "A sweetness in the wine that should not be there.",
   },
   {
@@ -200,8 +302,8 @@ export const DISASTERS: DisasterCard[] = [
     emoji: "☿",
     severity: "major",
     effectText: "Quicksilver haze: every working alchemist becomes Sickened.",
-    preventionText: "Seal the retort with lead: pay 1 Metal.",
-    preventionCost: { metals: 1 },
+    preventionText: "Seal the retort with lead and pay to vent the vapors: 1 Metal and 1 Gold.",
+    preventionCost: { metals: 1, gold: 1 },
     flavor: "The toxic mercury seeps into every crevice, contaminating all it touches.",
   },
   {
@@ -231,8 +333,8 @@ export const DISASTERS: DisasterCard[] = [
     emoji: "💥",
     severity: "catastrophic",
     effectText: "Molten spray: one working alchemist becomes Critical; the Crucible is unusable next round.",
-    preventionText: "Reinforce the vessel: pay 2 Metals.",
-    preventionCost: { metals: 2 },
+    preventionText: "Swap in a Hessian crucible, proof against thermal shock: pay 2 Gold and 1 Metal.",
+    preventionCost: { gold: 2, metals: 1 },
     flavor: "The blast sends molten metal everywhere, sparing no one.",
   },
   {

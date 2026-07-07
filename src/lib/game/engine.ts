@@ -4,6 +4,9 @@
 
 import {
   ACID_DISASTERS,
+  BASE_BUILDABLE,
+  BUILD_COST,
+  FURNITURE_BY_ID,
   DISASTER_BY_ID,
   DISASTERS,
   GRAND_TRANSMUTATION_ROUND,
@@ -12,6 +15,7 @@ import {
   STARTING_RESOURCES,
   RESEARCH_TRACK,
   WIN_VP,
+  WORKER_ROSTER,
 } from "./data";
 import type {
   DisasterCard,
@@ -109,12 +113,9 @@ export function newGame(seed: number = Math.floor(Math.random() * 2 ** 31)): Gam
     rngState: seed,
     round: 1,
     phase: "placement",
-    workers: [
-      { id: "w1", name: "Basil", health: "healthy", illuminated: false, placedOn: null, exhausted: false },
-      { id: "w2", name: "Perenelle", health: "healthy", illuminated: false, placedOn: null, exhausted: false },
-    ],
+    workers: [],
     resources: { ...STARTING_RESOURCES },
-    furniture: ["crucible", "alembic", "workbench", "researchDesk", "fumeHood"],
+    furniture: [], // empty board — every tile must be built
     brokenFurniture: {},
     crucibleRecipe: null,
     upgrades: [],
@@ -130,6 +131,12 @@ export function newGame(seed: number = Math.floor(Math.random() * 2 ** 31)): Gam
     outcome: null,
     outcomeText: "",
   };
+  // Two documented alchemists drawn per game from the AlchemyTimelineMap roster.
+  const roster = shuffled(state, WORKER_ROSTER);
+  state.workers = [
+    { id: "w1", name: roster[0].name, health: "healthy", illuminated: false, placedOn: null, exhausted: false },
+    { id: "w2", name: roster[1].name, health: "healthy", illuminated: false, placedOn: null, exhausted: false },
+  ];
   // Escalation ladder: rounds 1-4 minor, 5-8 major, 9-10 catastrophic.
   const minor = shuffled(state, DISASTERS.filter((d) => d.severity === "minor").map((d) => d.id));
   const major = shuffled(state, DISASTERS.filter((d) => d.severity === "major").map((d) => d.id));
@@ -251,8 +258,16 @@ function applyDisaster(state: GameState, card: DisasterCard): void {
       break;
     }
     case "equipmentFailure": {
-      state.brokenFurniture.workbench = state.round;
-      log(state, { phase: "disaster", tone: "bad", text: "The Workbench jams — unusable next round." });
+      // Jam the most valuable operable production tile the player actually owns.
+      const target = (["crucible", "alembic", "workbench", "researchDesk"] as FurnitureId[]).find(
+        (t) => state.furniture.includes(t) && !tileBroken(state, t),
+      );
+      if (target) {
+        state.brokenFurniture[target] = state.round;
+        log(state, { phase: "disaster", tone: "bad", text: `The ${FURNITURE_BY_ID.get(target)!.name} jams — unusable next round.` });
+      } else {
+        log(state, { phase: "disaster", tone: "neutral", text: "The failure finds no apparatus to ruin — the board is still bare." });
+      }
       break;
     }
     case "hydrochloricSpill": {
@@ -297,8 +312,10 @@ function applyDisaster(state: GameState, card: DisasterCard): void {
         v.health = worsen(v.health, "critical");
         log(state, { phase: "disaster", tone: "bad", text: `${v.name} is CRITICAL — molten spray. Heal them this round or lose them.` });
       }
-      state.brokenFurniture.crucible = state.round;
-      log(state, { phase: "disaster", tone: "bad", text: "The Crucible is wrecked — unusable next round." });
+      if (state.furniture.includes("crucible")) {
+        state.brokenFurniture.crucible = state.round;
+        log(state, { phase: "disaster", tone: "bad", text: "The Crucible is wrecked — unusable next round." });
+      }
       break;
     }
     case "nitricBurn": {
@@ -375,7 +392,13 @@ function runUpkeep(state: GameState): void {
 // ── Reducer ───────────────────────────────────────────────
 
 function clone(state: GameState): GameState {
-  return structuredClone(state);
+  // The log is append-only and its entries are never mutated, so we shallow-copy
+  // the array instead of deep-cloning it — this keeps reduce() linear, not
+  // quadratic, which matters for the thousands of games the balance sims run.
+  const { log, ...rest } = state;
+  const copy = structuredClone(rest) as GameState;
+  copy.log = log.slice();
+  return copy;
 }
 
 export function reduce(prev: GameState, action: GameAction): GameState {
@@ -384,6 +407,22 @@ export function reduce(prev: GameState, action: GameAction): GameState {
   const state = clone(prev);
 
   switch (action.type) {
+    case "buildTile": {
+      if (state.phase !== "placement") return prev;
+      const worker = state.workers.find((w) => w.id === action.workerId);
+      if (!worker || !canWork(worker) || worker.placedOn !== null) return prev;
+      const tile = action.tileId;
+      if (!BASE_BUILDABLE.includes(tile) || state.furniture.includes(tile)) return prev;
+      const cost = BUILD_COST[tile];
+      if (!canAfford(state.resources, cost)) return prev;
+      state.resources = pay(state.resources, cost);
+      state.furniture.push(tile);
+      worker.exhausted = true; // building consumes the worker's action this round
+      const t = FURNITURE_BY_ID.get(tile)!;
+      log(state, { phase: "placement", tone: "good", text: `${worker.name} constructs the ${t.name} ${t.emoji}.` });
+      return state;
+    }
+
     case "placeWorker": {
       if (state.phase !== "placement") return prev;
       const worker = state.workers.find((w) => w.id === action.workerId);
