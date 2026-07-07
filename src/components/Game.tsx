@@ -331,6 +331,7 @@ export default function Game() {
                       <p className="mt-auto text-[11px] italic text-stone-500">
                         &ldquo;{tile.flavor}&rdquo; — {tile.flavorSource}
                       </p>
+                      <p className="text-[10px] text-amber-700/80">📖 {tile.scholarship}</p>
                       {occupant && (
                         <span className="absolute right-2 top-2 rounded-full border border-sky-600 bg-sky-950 px-2 py-0.5 text-xs text-sky-200">
                           {occupant.name}
@@ -399,9 +400,9 @@ export default function Game() {
                     setSelectedWorker(null);
                   }}
                   className="animate-pulse rounded-xl border-2 border-yellow-400 bg-yellow-950 px-5 py-2 font-serif text-lg font-semibold text-yellow-200 hover:bg-yellow-900"
-                  title="Costs 1 Potion + 2 Metals + 1 Gold. 50/50: +4 VP and Illumination, or your alchemist goes CRITICAL."
+                  title="Chrysopoeia — the gold-making Great Work. Costs 1 Potion + 2 Metals + 1 Gold. 50/50: +4 VP and Illumination, or your alchemist goes CRITICAL. (Principe reconstructed the 'Philosophers' Tree' by this route.)"
                 >
-                  🌟 The Grand Experiment (1🧪+2⛏️+1🪙 — all or nothing)
+                  🌟 The Chrysopoeia (1🧪+2⛏️+1🪙 — all or nothing)
                 </button>
               )}
               {availableWorkers.length > 0 && !selectedWorker && (

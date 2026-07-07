@@ -145,7 +145,7 @@ export function newGame(seed: number = Math.floor(Math.random() * 2 ** 31)): Gam
   log(state, {
     phase: "setup",
     tone: "neutral",
-    text: `The lab is swept, the furnace lit. Ten rounds to prove the work. Reach ${WIN_VP} VP — and keep your alchemists alive.`,
+    text: `The lab is swept, the furnace lit. Chymistry is a craft of the hands: ten rounds to prove the work, reach ${WIN_VP} VP — and keep your alchemists alive.`,
   });
   return state;
 }
@@ -461,14 +461,14 @@ export function reduce(prev: GameState, action: GameAction): GameState {
         log(state, {
           phase: "placement",
           tone: "gold",
-          text: `${worker.name} attempts the Grand Experiment — and the projection holds! A gilded marvel, the talk of every court. (+4 VP, ${worker.name} is Illuminated: +1 VP)`,
+          text: `${worker.name} attempts the Chrysopoeia — and a silver Philosophers' Tree branches in the flask, just as Principe grew it again in the lab. A marvel, the talk of every court. (+4 VP, ${worker.name} is Illuminated: +1 VP)`,
         });
       } else {
         worker.health = worsen(worker.health, "critical");
         log(state, {
           phase: "placement",
           tone: "bad",
-          text: `${worker.name} attempts the Grand Experiment — the vessel shatters. ${worker.name} is CRITICAL. Heal them this round or lose them.`,
+          text: `${worker.name} attempts the Chrysopoeia — the sealed vessel bursts in the fire. ${worker.name} is CRITICAL. Heal them this round or lose them.`,
         });
       }
       state.vp = computeVp(state);

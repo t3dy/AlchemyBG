@@ -142,6 +142,10 @@ export const RECIPES: Recipe[] = [
   },
 ];
 
+// Equipment grounded in the "new historiography of alchemy": chymistry as a rigorous,
+// reproducible, quantitative craft (Newman & Principe), distillation as its emblematic
+// operation (Moran), and the laboratory as a real material workspace, not a den of
+// mysticism. Citations in docs/HISTORIOGRAPHY.md.
 export const FURNITURE: FurnitureTile[] = [
   {
     id: "crucible",
@@ -150,8 +154,9 @@ export const FURNITURE: FurnitureTile[] = [
     description: "Brew a recipe: Potion (2🌿+1⛏️), Medicine (1🌿+1🪙), or Advanced Potion (1🧪+1⛏️).",
     passive: false,
     flavor:
-      "Hessian crucibles, fired above 1,300°C, unknowingly synthesized mullite — world-renowned resistance to thermal shock.",
-    flavorSource: "UCL/Cardiff crucible archaeology",
+      "The chymist's fire tries all things. Hessian crucibles, fired past 1,300 °C, held metal and reagent where lesser clay would burst.",
+    flavorSource: "Hessian crucibles, c. 1450–1750",
+    scholarship: "Martinón-Torres & Rehren, crucible archaeometry; the material-culture turn (Newman & Principe)",
   },
   {
     id: "alembic",
@@ -160,58 +165,64 @@ export const FURNITURE: FurnitureTile[] = [
     description: "Distill: gain 2 Metals and 1 Gold (sickened: 1 Metal, no Gold). Advanced Distillation adds +1 Metal.",
     passive: false,
     flavor:
-      "Separating the volatile from the fixed by heat and condensation, in alembic and cucurbit — the central operation of the art.",
-    flavorSource: "distillation, AlchemyTimelineMap",
+      "Distillation — driving off the volatile and catching it again — was the art's signature operation, joining craft skill to natural philosophy.",
+    flavorSource: "alembic & cucurbit; Rupescissa on the quintessence, 14th c.",
+    scholarship: "Bruce T. Moran, Distilling Knowledge: Alchemy, Chemistry, and the Scientific Revolution (2005)",
   },
   {
     id: "workbench",
-    name: "Workbench",
+    name: "Laboratory Bench",
     emoji: "🪑",
     description: "Gather: gain 3 Ingredients (2 if the worker is sickened).",
     passive: false,
     flavor:
-      "Knowledge resident in hands and senses: craft mastery the treatises could not fully write down.",
-    flavorSource: "artisanal epistemology (P. Smith)",
+      "Chymists kept notebooks, weighed reagents, and repeated trials. George Starkey's bench work was skilled, quantitative labor — not idle reverie.",
+    flavorSource: "George Starkey's laboratory notebooks, c. 1650s",
+    scholarship: "Newman & Principe, Alchemy Tried in the Fire (2002); P. Smith on artisanal epistemology",
   },
   {
     id: "researchDesk",
-    name: "Research Desk",
+    name: "Reading Desk",
     emoji: "📜",
-    description: "Research: pay 1 Ingredient to unlock the next upgrade (+1 VP each).",
+    description: "Research: pay 1 Ingredient to decode a recipe and unlock the next upgrade (+1 VP each).",
     passive: false,
     flavor:
-      "In Toledo, Gerard of Cremona turned Arabic treatises on distillation and acids into Latin — and Europe's labs changed.",
-    flavorSource: "translation movement, 12th c.",
+      "Recipes hid behind Decknamen — cover-names like 'our Diana' and 'the Doves of Diana.' Reading them rightly is what let modern scholars run the operations again.",
+    flavorSource: "Decknamen in the Philalethes/Starkey corpus, 17th c.",
+    scholarship: "Lawrence M. Principe, The Secrets of Alchemy (2013), on decoding Decknamen",
   },
   {
     id: "fumeHood",
-    name: "Fume Hood",
+    name: "Furnace Hood",
     emoji: "🌬️",
     description: "Passive: negates the first sickening effect each round.",
     passive: true,
     flavor:
-      "Excavated glass and crucibles from Tycho's Uraniborg lab carry mercury and lead — the air of the workshop was not kind.",
-    flavorSource: "Uraniborg excavation, 1988–90",
+      "A hood and flue drew off the poisons the work really made. Residues from Tycho's Uraniborg laboratory still carry mercury, arsenic, and lead.",
+    flavorSource: "Uraniborg laboratory residues, excavated 1988–90",
+    scholarship: "Moran, Distilling Knowledge; the courtly laboratory as a real workspace",
   },
   {
     id: "safetyShower",
-    name: "Safety Shower",
+    name: "Quenching Trough",
     emoji: "🚿",
     description: "Passive: one free healing step each round during the Healing phase.",
     passive: true,
     flavor:
-      "Operational chemistry was empirically successful — and empirically dangerous. Recovery was part of the craft.",
-    flavorSource: "operational chemistry, AlchemyTimelineMap",
+      "Every furnace-house kept water to hand against burns and fire. The metallurgical manuals treat such hazards as routine, not exceptional.",
+    flavorSource: "Biringuccio, De la pirotechnia (1540); Agricola, De re metallica (1556)",
+    scholarship: "Moran on chymistry's craft matrix in metallurgy and the arts of fire",
   },
   {
     id: "neutralizationStation",
-    name: "Neutralization Station",
+    name: "Salt-of-Tartar Bath",
     emoji: "🧂",
     description: "Passive: cancel one acid disaster entirely, once per game.",
     passive: true,
     flavor:
-      "Acid production reached the Latin West through translated Arabic treatises; so did the means of taming it.",
-    flavorSource: "Gerard of Cremona transmission",
+      "Fixed alkali — salt of tartar — swallowed the strong acids with a hiss. The acid–alkali reaction was hard-won chymical knowledge, not lore.",
+    flavorSource: "salt of tartar (potash) vs. the mineral acids, 16th–17th c.",
+    scholarship: "Newman & Principe on chymistry as reproducible experimental knowledge",
   },
 ];
 
@@ -220,21 +231,21 @@ export const FURNITURE: FurnitureTile[] = [
 export const RESEARCH_TRACK: ResearchUpgrade[] = [
   {
     id: "advancedDistillation",
-    name: "Advanced Distillation",
+    name: "Cohobation",
     emoji: "⚗️",
-    description: "The Alembic yields +1 Metal.",
+    description: "Redistilling the draw-off enriches the yield: the Alembic gives +1 Metal. (Moran, Distilling Knowledge)",
   },
   {
     id: "safetyShower",
-    name: "Safety Shower",
+    name: "Quenching Trough",
     emoji: "🚿",
-    description: "Adds the Safety Shower tile: one free healing step per round.",
+    description: "Adds the Quenching Trough: one free healing step per round.",
   },
   {
     id: "neutralizationStation",
-    name: "Neutralization Station",
+    name: "Salt-of-Tartar Bath",
     emoji: "🧂",
-    description: "Adds the Neutralization Station: cancel one acid disaster per game.",
+    description: "Adds the Salt-of-Tartar Bath: cancel one acid disaster per game.",
   },
 ];
 

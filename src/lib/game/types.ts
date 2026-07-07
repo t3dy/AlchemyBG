@@ -36,8 +36,12 @@ export interface FurnitureTile {
   description: string;
   /** Some tiles (fume hood, safety shower) are passive and cannot host a worker. */
   passive: boolean;
+  /** An in-period historical statement about the apparatus/practice. */
   flavor: string;
+  /** The primary-source locus or period attribution for the flavor line. */
   flavorSource: string;
+  /** Modern scholarship (new historiography of alchemy) the design draws on. */
+  scholarship: string;
 }
 
 export type DisasterSeverity = "minor" | "major" | "catastrophic";
