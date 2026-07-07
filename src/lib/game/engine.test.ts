@@ -368,7 +368,7 @@ describe("persona abilities (historically grounded, small)", () => {
   });
 });
 
-describe("patron's cabinet (second scoring path)", () => {
+describe("cupellation furnace (second scoring path)", () => {
   it("fulfilling a commission spends goods and grants reputation VP", async () => {
     const { COMMISSION_BY_ID } = await import("./data");
     let s = newGame(3);

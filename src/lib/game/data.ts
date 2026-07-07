@@ -39,7 +39,7 @@ export const WORKER_ROSTER: WorkerPersona[] = [
     bio: "Jabir ibn Hayyan, 8th–9th c. — corpus that shaped practical chemistry for a millennium; the Latin West's 'Geber'.",
     ability: "the-corpus",
     abilityName: "The Corpus",
-    abilityText: "When Jabir works the Reading Desk, research costs no Ingredient (his vast systematizing corpus).",
+    abilityText: "When Jabir works the Assay Balance, the assay costs no Ingredient (his vast systematizing corpus).",
   },
   {
     slug: "al-razi",
@@ -66,7 +66,7 @@ export const WORKER_ROSTER: WorkerPersona[] = [
     bio: "Gerard of Cremona, 12th c. — Toledo translator who carried Arabic alchemical treatises into Latin.",
     ability: "translations",
     abilityName: "Toledo Translations",
-    abilityText: "When Gerard works the Reading Desk, also gain +1 Gold (knowledge into patronage).",
+    abilityText: "When Gerard works the Assay Balance, also gain +1 Gold (his translated recipes, turned to coin).",
   },
   {
     slug: "roger-bacon",
@@ -131,18 +131,19 @@ export const BASE_BUILDABLE: FurnitureId[] = [
   "patronsCabinet",
 ];
 
-// Court commissions — the second scoring path. A worker at the Patron's Cabinet
-// delivers the goods for reputation (VP). Costs are priced in the shadow model
-// (docs/BALANCE_MODEL.md) at ~1.2–1.3 VP-eq of materials per 2 VP, so the cabinet
-// pays ≈ the baseline wage r and never dominates the crucible. Grounded in Moran's
-// work on courtly alchemy (The Alchemical World of the German Court, 1991).
+// Assay & refining jobs — the second scoring path, worked at the Cupellation Furnace.
+// Each is a real early-modern laboratory operation on metals and salts; completing one
+// proves fine metal (VP). Costs are priced in the shadow model (docs/BALANCE_MODEL.md)
+// at ~1.2–1.5 VP-eq of materials per 2–3 VP, so the furnace pays ≈ the baseline wage r
+// and never dominates the crucible. Grounded in assay archaeology (Martinón-Torres &
+// Rehren) and Roos, The Salt of the Earth.
 export const COMMISSIONS: Commission[] = [
-  { id: "pigments", name: "Pigments for the Elector", cost: { gold: 2, metals: 2 }, vp: 3, flavor: "Vermilion and verdigris for the court painters." },
-  { id: "aquaVitae", name: "Aqua Vitae for the Infirmary", cost: { gold: 1, ingredients: 3 }, vp: 2, flavor: "Distilled spirits against the winter fevers." },
-  { id: "gilding", name: "A Gilded Showpiece", cost: { gold: 2, metals: 1 }, vp: 2, flavor: "Base metal dressed as gold for the Kunstkammer." },
-  { id: "assay", name: "Assay the Mint's Silver", cost: { gold: 3 }, vp: 3, flavor: "The prince's coin must be proven pure." },
-  { id: "salts", name: "Medicinal Salts", cost: { gold: 2, ingredients: 2 }, vp: 3, flavor: "Sal mirabile and tartar for the apothecary." },
-  { id: "elixir", name: "A Cordial for the Duke", cost: { gold: 2, metals: 1 }, vp: 2, flavor: "A restorative worthy of a patron's table." },
+  { id: "cupelRegulus", name: "Cupel the Regulus", cost: { gold: 2, metals: 2 }, vp: 3, flavor: "Blast air across the bone-ash cupel; base metals sink as litharge, a bright bead remains." },
+  { id: "partGold", name: "Part Gold from Silver", cost: { gold: 1, ingredients: 3 }, vp: 2, flavor: "Aqua fortis eats the silver and spares the gold — the parting acid does the sorting." },
+  { id: "cementGold", name: "Cement the Gold", cost: { gold: 2, metals: 1 }, vp: 2, flavor: "Salt and brick-dust packed hot around the leaf draw the base metal out through the surface." },
+  { id: "fireAssay", name: "Fire-Assay the Ore", cost: { gold: 3 }, vp: 3, flavor: "Fusion, cupel, and the balance: the weight of the bead is the truth of the vein." },
+  { id: "sublimeSalt", name: "Sublime the Sal Ammoniac", cost: { gold: 2, ingredients: 2 }, vp: 3, flavor: "The volatile salt climbs the aludel and re-forms as a pure crystalline crust." },
+  { id: "distilAquaFortis", name: "Distil Aqua Fortis", cost: { gold: 2, metals: 1 }, vp: 2, flavor: "Nitre and oil of vitriol in the retort yield the fuming acid that bites every metal but gold." },
 ];
 
 export const COMMISSION_BY_ID = new Map(COMMISSIONS.map((c) => [c.id, c]));
@@ -226,36 +227,36 @@ export const FURNITURE: FurnitureTile[] = [
   },
   {
     id: "workbench",
-    name: "Laboratory Bench",
-    emoji: "🪑",
-    description: "Gather: gain 3 Ingredients (2 if the worker is sickened).",
+    name: "Mortar & Pestle",
+    emoji: "⚗",
+    description: "Grind and prepare reagents: gain 3 Ingredients (2 if the worker is sickened).",
     passive: false,
     flavor:
-      "Chymists kept notebooks, weighed reagents, and repeated trials. George Starkey's bench work was skilled, quantitative labor — not idle reverie.",
-    flavorSource: "George Starkey's laboratory notebooks, c. 1650s",
-    scholarship: "Newman & Principe, Alchemy Tried in the Fire (2002); P. Smith on artisanal epistemology",
+      "Before any fire, the work is grinding: minerals levigated to an impalpable powder so the fire can seize them. Preparation was skilled, embodied labor.",
+    flavorSource: "levigation and comminution of minerals, a standard first operation",
+    scholarship: "Pamela Smith on artisanal epistemology; Newman & Principe on chymical practice",
   },
   {
     id: "researchDesk",
-    name: "Reading Desk",
-    emoji: "📜",
-    description: "Research: pay 1 Ingredient to decode a recipe and unlock the next upgrade (+1 VP each).",
+    name: "Assay Balance",
+    emoji: "⚖️",
+    description: "Assay by weight: pay 1 Ingredient to master the next technique (+1 VP each).",
     passive: false,
     flavor:
-      "Recipes hid behind Decknamen — cover-names like 'our Diana' and 'the Doves of Diana.' Reading them rightly is what let modern scholars run the operations again.",
-    flavorSource: "Decknamen in the Philalethes/Starkey corpus, 17th c.",
-    scholarship: "Lawrence M. Principe, The Secrets of Alchemy (2013), on decoding Decknamen",
+      "The balance made chymistry quantitative. Weighing before and after, Boyle and Newton proved that matter was conserved through the operations — the assay does not lie.",
+    flavorSource: "gravimetric assay; the mass-balance of the 17th-c. laboratory",
+    scholarship: "Newman & Principe, Alchemy Tried in the Fire (2002), on quantitative chymistry",
   },
   {
     id: "patronsCabinet",
-    name: "Patron's Cabinet",
-    emoji: "🏰",
-    description: "Fulfill the current court Commission: deliver its goods to gain reputation (VP).",
+    name: "Cupellation Furnace",
+    emoji: "🏵️",
+    description: "Assay & refine: complete the current refining job to prove fine metal (VP).",
     passive: false,
     flavor:
-      "Alchemy lived in the courts — princes funded laboratories and prized the marvels, medicines, and gilded work they produced.",
-    flavorSource: "the Kunstkammer and the courtly laboratory, 16th–17th c.",
-    scholarship: "Bruce T. Moran, The Alchemical World of the German Court (1991)",
+      "On a bone-ash cupel, a blast of air drives the base metals into the ash as litharge and leaves a bright bead of pure gold or silver — the fire assay, the truest test of the work.",
+    flavorSource: "cupellation and the fire assay; parting and cementation",
+    scholarship: "Martinón-Torres & Rehren on assay archaeology; Roos, The Salt of the Earth",
   },
   {
     id: "fumeHood",

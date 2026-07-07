@@ -169,7 +169,7 @@ export function newGame(seed: number = Math.floor(Math.random() * 2 ** 31)): Gam
 
 // ── Production ────────────────────────────────────────────
 
-// Gather before refining, refine before brewing, then research and sell to the court.
+// Grind, then distil, then fire, then assay by balance, then cupel and refine.
 const PRODUCTION_ORDER: FurnitureId[] = ["workbench", "alembic", "crucible", "researchDesk", "patronsCabinet"];
 
 function runProduction(state: GameState): void {
@@ -253,16 +253,16 @@ function runProduction(state: GameState): void {
         break;
       }
       case "patronsCabinet": {
-        const commission = state.commissionDeck.length ? COMMISSION_BY_ID.get(state.commissionDeck[0]) : undefined;
-        if (!commission) {
-          log(state, { phase: "production", tone: "neutral", text: `${worker.name} finds no commission awaiting at the Cabinet.` });
-        } else if (canAfford(state.resources, commission.cost)) {
-          state.resources = pay(state.resources, commission.cost);
-          state.commissionsVp += commission.vp;
+        const assay = state.commissionDeck.length ? COMMISSION_BY_ID.get(state.commissionDeck[0]) : undefined;
+        if (!assay) {
+          log(state, { phase: "production", tone: "neutral", text: `${worker.name} finds no assay left to run at the Cupellation Furnace.` });
+        } else if (canAfford(state.resources, assay.cost)) {
+          state.resources = pay(state.resources, assay.cost);
+          state.commissionsVp += assay.vp;
           state.commissionDeck.shift();
-          log(state, { phase: "production", tone: "gold", text: `${worker.name} fulfills a commission — ${commission.name} (+${commission.vp} VP reputation).` });
+          log(state, { phase: "production", tone: "gold", text: `${worker.name} completes the assay — ${assay.name} (+${assay.vp} VP, proven fine metal).` });
         } else {
-          log(state, { phase: "production", tone: "bad", text: `${worker.name} cannot yet meet the commission: ${commission.name}.` });
+          log(state, { phase: "production", tone: "bad", text: `${worker.name} lacks the materials for the assay: ${assay.name}.` });
         }
         break;
       }
@@ -439,7 +439,7 @@ function runUpkeep(state: GameState): void {
   if (state.round >= MAX_ROUNDS) {
     state.phase = "gameOver";
     state.outcome = "lost";
-    state.outcomeText = `Ten rounds gone, ${state.vp} of ${WIN_VP} VP earned. The work remains unfinished — the patron withdraws.`;
+    state.outcomeText = `Ten rounds gone, ${state.vp} of ${WIN_VP} VP earned. The work remains unfinished — the furnace goes cold.`;
     log(state, { phase: "upkeep", tone: "bad", text: state.outcomeText });
     return;
   }

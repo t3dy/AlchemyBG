@@ -45,19 +45,23 @@ Design rule: flavor and mechanics may only assert what this scholarship supports
 
 ## Mapping: game element → apparatus/practice → scholarship
 
+The board is **pure laboratory apparatus** — no Reading Desk, no Patron's Cabinet. Every
+tile is a real operation of the working lab, cross-referenced to the 100 facts in
+ALCHEMY_FACTS.md.
+
 | Element | Historical anchor | Scholarship |
 |---|---|---|
-| **Crucible** (fire, conversion) | Hessian crucibles, high-temp metallurgy | Martinón-Torres & Rehren; material-culture turn (Newman & Principe) |
-| **Alembic** (distill → metal/gold) | alembic & cucurbit; the quintessence | Moran, *Distilling Knowledge* (2005) |
-| **Laboratory Bench** (gather; quantitative labor) | Starkey's notebooks; weighed, repeated trials | Newman & Principe, *Alchemy Tried in the Fire* (2002); Smith |
-| **Reading Desk** (decode recipe → upgrade) | **Decknamen** — "our Diana," "the Doves of Diana" | Principe, *The Secrets of Alchemy* (2013) |
-| **Furnace Hood** (negate first sickening) | flue/hood over the furnace; Uraniborg mercury/arsenic/lead residues | Moran; courtly-laboratory studies |
+| **Mortar & Pestle** (grind/prepare → ingredients) | levigation of minerals, the skilled first operation | Pamela Smith on artisanal epistemology; Newman & Principe |
+| **Alembic** (distil → metal/gold) | alembic & cucurbit; distillation as the signature operation | Moran, *Distilling Knowledge* (2005) |
+| **Crucible** (fire → potions/medicine) | Hessian crucibles, mullite, high-temp metallurgy | Martinón-Torres & Rehren; material-culture turn |
+| **Assay Balance** (weigh & prove → technique upgrade) | the balance made chymistry quantitative; weigh before/after | Newman & Principe, *Alchemy Tried in the Fire* (2002) |
+| **Furnace Hood** (negate first sickening) | flue/hood over the furnace; Uraniborg mercury/arsenic/lead residues | Moran; Uraniborg excavation (1988–90) |
+| **Cupellation Furnace** (assay & refine → VP) | cupellation, parting, cementation — the fire assay proves fine metal | assay archaeology; Roos, *The Salt of the Earth* |
 | **Quenching Trough** (free heal) | water against burns/fire in the furnace-house | Biringuccio (1540); Agricola (1556); Moran |
-| **Salt-of-Tartar Bath** (cancel an acid disaster) | fixed alkali vs. the mineral acids | Newman & Principe on reproducible chymical knowledge |
-| **Patron's Cabinet** (fulfill Commissions → VP) | the Kunstkammer; princely funding of laboratories; medicines, marvels, and gilded work as court goods | Bruce T. Moran, *The Alchemical World of the German Court* (1991) |
+| **Salt-of-Tartar Bath** (cancel an acid disaster) | fixed alkali (potash) neutralizes the mineral acids | Roos, *The Salt of the Earth*; Newman & Principe |
 | **Cohobation** (research upgrade: alembic +1) | redistilling the draw-off to enrich yield | Moran, *Distilling Knowledge* |
 | **The Chrysopoeia** (endgame gamble) | the **Philosophers' Tree** / *arbor Dianae*, reconstructed in the lab | Principe, *The Secrets of Alchemy* (2013) |
-| **Disaster deck** (real reagents: aqua fortis, mercury, arsenic, sulphur) | genuine hazards of chymical work | the danger is the counterpoint to chymistry's real efficacy |
+| **Disaster deck** (aqua fortis, mercury, antimony, vitriol) | genuine hazards of chymical work | the danger is the counterpoint to chymistry's real efficacy |
 
 ## What we deliberately do NOT do
 

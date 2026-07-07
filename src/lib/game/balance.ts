@@ -146,7 +146,7 @@ export type Archetype = "production" | "distillation" | "research" | "safety" | 
 
 // Priority build orders. Every viable engine needs the workbench→alembic→crucible
 // core (ingredients + metal + conversion); archetypes differ in WHEN they slot the
-// remaining tiles (research VP, fume-hood safety, or the patron's cabinet second
+// remaining tiles (research VP, fume-hood safety, or the cupellation furnace second
 // scoring path) and their operating emphasis.
 const BUILD_ORDER: Record<Archetype, FurnitureId[]> = {
   production: ["workbench", "crucible", "alembic", "researchDesk", "fumeHood"],

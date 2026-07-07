@@ -345,7 +345,7 @@ export default function Game() {
                       <p className="text-xs text-stone-300">{tile.description}</p>
                       {fid === "patronsCabinet" && built && currentCommission && (
                         <p className="rounded border border-amber-800/60 bg-amber-950/40 px-1.5 py-1 text-[11px] text-amber-200">
-                          Commission: <b>{currentCommission.name}</b> — deliver {commissionCostText(currentCommission.cost)} for{" "}
+                          Assay: <b>{currentCommission.name}</b> — spend {commissionCostText(currentCommission.cost)} for{" "}
                           <b>+{currentCommission.vp} VP</b>
                         </p>
                       )}
