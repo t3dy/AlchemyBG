@@ -1,7 +1,7 @@
-import type { DisasterCard, FurnitureId, FurnitureTile, ResearchUpgrade, Resources } from "./types";
+import type { AbilityId, DisasterCard, FurnitureId, FurnitureTile, ResearchUpgrade, Resources } from "./types";
 
 export const MAX_ROUNDS = 10;
-export const WIN_VP = 8;
+export const WIN_VP = 9;
 export const GRAND_TRANSMUTATION_ROUND = 9;
 
 // Historically documented alchemists, drawn from the AlchemyTimelineMap database
@@ -12,64 +12,101 @@ export interface WorkerPersona {
   name: string;
   era: string;
   bio: string;
+  ability: AbilityId;
+  /** Player-facing ability name + effect. */
+  abilityName: string;
+  abilityText: string;
 }
 
+// Abilities are grounded in each figure's documented contribution and priced small
+// by the shadow-price model (docs/BALANCE_MODEL.md §7). Because newGame draws the
+// same personas per seed for every build-order archetype, abilities add per-game
+// variance without biasing the strategy-parity harness.
 export const WORKER_ROSTER: WorkerPersona[] = [
   {
     slug: "zosimos-of-panopolis",
     name: "Zosimos",
     era: "Late Antique",
     bio: "Zosimos of Panopolis, 3rd c. — earliest systematic alchemical writer; craft practice meets Greek philosophy.",
+    ability: "sublimation",
+    abilityName: "Sublimation",
+    abilityText: "When Zosimos works the Alembic, also gain +1 Ingredient (his sublimation operations).",
   },
   {
     slug: "jabir-ibn-hayyan",
     name: "Jabir",
     era: "Medieval",
     bio: "Jabir ibn Hayyan, 8th–9th c. — corpus that shaped practical chemistry for a millennium; the Latin West's 'Geber'.",
+    ability: "the-corpus",
+    abilityName: "The Corpus",
+    abilityText: "When Jabir works the Reading Desk, research costs no Ingredient (his vast systematizing corpus).",
   },
   {
     slug: "al-razi",
     name: "al-Razi",
     era: "Medieval",
     bio: "al-Razi, 9th–10th c. — Persian physician-alchemist; advanced systematic distillation and metallurgical work.",
+    ability: "systematic-still",
+    abilityName: "Systematic Distillation",
+    abilityText: "When al-Razi works the Alembic, gain +1 Metal (his classified apparatus and processes).",
   },
   {
     slug: "al-kindi",
     name: "al-Kindi",
     era: "Medieval",
     bio: "al-Kindi, 9th c. — Baghdad philosopher and polymath who engaged alchemy critically.",
+    ability: "essences",
+    abilityName: "Distiller of Essences",
+    abilityText: "When al-Kindi works the Alembic, gain +1 Gold (his treatise on distilling perfumes).",
   },
   {
     slug: "gerard-of-cremona",
     name: "Gerard",
     era: "Medieval",
     bio: "Gerard of Cremona, 12th c. — Toledo translator who carried Arabic alchemical treatises into Latin.",
+    ability: "translations",
+    abilityName: "Toledo Translations",
+    abilityText: "When Gerard works the Reading Desk, also gain +1 Gold (knowledge into patronage).",
   },
   {
     slug: "roger-bacon",
     name: "Roger Bacon",
     era: "Medieval",
     bio: "Roger Bacon, 13th c. — English Franciscan natural philosopher engaged with alchemy and experiment.",
+    ability: "experiment",
+    abilityName: "Experimental Method",
+    abilityText: "Bacon's Potion brews at the Crucible cost 1 fewer Ingredient (his championing of experiment).",
   },
   {
     slug: "paracelsus",
     name: "Paracelsus",
     era: "Early Modern",
     bio: "Paracelsus, 1493–1541 — Swiss physician; pioneered medical alchemy and pharmaceutical preparation.",
+    ability: "iatrochemistry",
+    abilityName: "Iatrochemistry",
+    abilityText: "When Paracelsus brews Medicine, produce 2 instead of 1 (the father of medical chemistry).",
   },
   {
     slug: "tycho-brahe",
     name: "Tycho",
     era: "Early Modern",
     bio: "Tycho Brahe, 1546–1601 — ran the Uraniborg laboratory; medicamenta tria rather than transmutation.",
+    ability: "medicamenta-tria",
+    abilityName: "Medicamenta Tria",
+    abilityText: "If Tycho is present, the lab starts with +2 Medicine (his three plague-medicines).",
   },
   {
     slug: "michael-maier",
     name: "Maier",
     era: "Early Modern",
     bio: "Michael Maier, 1568–1622 — German court physician and alchemist; author of Atalanta Fugiens.",
+    ability: "patronage",
+    abilityName: "Imperial Patronage",
+    abilityText: "If Maier is present, the lab starts with +3 Gold (physician to Rudolf II's court).",
   },
 ];
+
+export const PERSONA_BY_SLUG = new Map(WORKER_ROSTER.map((p) => [p.slug, p]));
 
 // The board starts EMPTY. Openings are gold-allocation puzzles: this stock buys
 // two cheap tiles, or one expensive tile plus operating capital.

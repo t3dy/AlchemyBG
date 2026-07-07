@@ -94,9 +94,26 @@ crucible, don't hoard one input), which lifted the economic lines to parity.
 Worker personas are drawn from the **AlchemyTimelineMap** database (all
 `SCHOLARSHIP_BASED` figures: Zosimos, Jabir, al-Razi, al-Kindi, Gerard of Cremona,
 Roger Bacon, Paracelsus, Tycho Brahe, Michael Maier — no legendary/fictional figures
-such as Flamel). They are mechanically identical today. When adding historically
-grounded abilities (Tycho: +1 when brewing Medicine — medicamenta tria; al-Razi: +1⛏️
-at the Alembic — systematic distillation; Zosimos: sublimation reroll), price each
-ability with §2: an ability is balanced when it adds ≤ 0.15·r per WR of expected value,
-and any stronger ability must carry a matching drawback. Re-run `strategyParity()` after
-any such change — persona abilities must not widen the median spread past 3 VP.
+such as Flamel). Two are drawn per game, each with **one passive ability grounded in
+their documented contribution**:
+
+| Persona | Ability | Effect | Historical basis |
+|---|---|---|---|
+| Zosimos | Sublimation | Alembic also +1 Ingredient | earliest systematic operations, incl. sublimation |
+| Jabir | The Corpus | research needs no Ingredient | the vast Jabirian corpus |
+| al-Razi | Systematic Distillation | Alembic +1 Metal | classified apparatus & processes |
+| al-Kindi | Distiller of Essences | Alembic +1 Gold | his treatise on distilling perfumes |
+| Gerard | Toledo Translations | research also +1 Gold | Arabic→Latin transmission |
+| Roger Bacon | Experimental Method | Potion costs 1 fewer Ingredient | championing of experiment |
+| Paracelsus | Iatrochemistry | Medicine brews yield 2 | father of medical chemistry |
+| Tycho | Medicamenta Tria | start +2 Medicine (one-time) | his three plague-medicines |
+| Maier | Imperial Patronage | start +3 Gold (one-time) | physician to Rudolf II |
+
+**Parity is preserved by construction**: `newGame(seed)` draws the same two personas
+for every build-order archetype, so abilities affect all four equally per seed — they
+add per-game texture without biasing the strategy comparison. Measured impact (60 seeds,
+after adding abilities): the three economic lines stayed dead-even (median 9, ~53% win),
+safety held its hedge identity (median 7, ~30%), **spread 2 VP**. Abilities did raise the
+overall economy, so `WIN_VP` moved 8 → 9 to keep competent play at a ~50% challenge.
+When adding or retuning abilities, keep each near ≤ 0.15·r per WR of EV, and re-run
+`strategyParity()` — the median spread must stay ≤ 3.

@@ -5,9 +5,25 @@ export type WorkerHealth = "healthy" | "sickened" | "injured" | "critical" | "de
 
 // "illuminated" is a positive overlay earned via the Grand Transmutation,
 // distinct from the health ladder.
+// Each roster alchemist has one passive ability grounded in their documented
+// historical contribution. Effects are small and mostly economic; see data.ts.
+export type AbilityId =
+  | "sublimation"      // Zosimos — Alembic also yields +1 Ingredient
+  | "the-corpus"       // Jabir — research needs no Ingredient
+  | "systematic-still" // al-Razi — Alembic yields +1 Metal
+  | "essences"         // al-Kindi — Alembic yields +1 Gold
+  | "translations"     // Gerard — research also yields +1 Gold
+  | "experiment"       // Roger Bacon — his Potion brews cost 1 fewer Ingredient
+  | "iatrochemistry"   // Paracelsus — brewing Medicine yields 2
+  | "medicamenta-tria" // Tycho — starts with +2 Medicine (one-time)
+  | "patronage";       // Maier — starts with +3 Gold (one-time)
+
 export interface Worker {
   id: string;
   name: string;
+  /** Roster persona slug (AlchemyTimelineMap), drives the ability. */
+  persona: string;
+  ability: AbilityId;
   health: WorkerHealth;
   illuminated: boolean;
   /** Tile id the worker is assigned to this round, or null. */

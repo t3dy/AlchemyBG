@@ -151,14 +151,14 @@ const BUILD_ORDER: Record<Archetype, FurnitureId[]> = {
   production: ["workbench", "crucible", "alembic", "researchDesk", "fumeHood"],
   distillation: ["alembic", "crucible", "workbench", "researchDesk", "fumeHood"],
   research: ["workbench", "researchDesk", "alembic", "crucible", "fumeHood"],
-  safety: ["workbench", "alembic", "fumeHood", "crucible", "researchDesk"],
+  safety: ["workbench", "crucible", "fumeHood", "alembic", "researchDesk"],
 };
 
 const BUILD_CAP: Record<Archetype, number> = {
   production: 4,
   distillation: 4,
   research: 4,
-  safety: 4,
+  safety: 5, // the hedge builds out fully — the Furnace Hood's survival edge affords it
 };
 
 function canBuild(s: GameState, tile: FurnitureId): boolean {

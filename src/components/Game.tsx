@@ -7,6 +7,7 @@ import {
   FURNITURE,
   GRAND_TRANSMUTATION_ROUND,
   MAX_ROUNDS,
+  PERSONA_BY_SLUG,
   RECIPES,
   WIN_VP,
 } from "@/lib/game/data";
@@ -231,12 +232,14 @@ export default function Game() {
             <div className="flex flex-wrap gap-2">
               {s.workers.map((w) => {
                 const hs = HEALTH_STYLE[w.health];
+                const persona = PERSONA_BY_SLUG.get(w.persona);
                 const selectable = s.phase === "placement" && canWork(w);
                 const selected = selectedWorker === w.id;
                 return (
                   <button
                     key={w.id}
                     disabled={!selectable && s.phase !== "healing"}
+                    title={persona ? `${persona.bio}\n\n${persona.abilityName}: ${persona.abilityText}` : undefined}
                     onClick={() => {
                       if (s.phase === "placement") {
                         if (w.placedOn) {
@@ -249,20 +252,25 @@ export default function Game() {
                         dispatchAndClear({ type: "healWorker", workerId: w.id });
                       }
                     }}
-                    className={`flex items-center gap-2 rounded-xl border-2 bg-stone-950 px-3 py-2 text-left transition ${hs.chip} ${
+                    className={`flex flex-col gap-0.5 rounded-xl border-2 bg-stone-950 px-3 py-2 text-left transition ${hs.chip} ${
                       selected ? "ring-2 ring-sky-400" : ""
                     } ${selectable || s.phase === "healing" ? "hover:bg-stone-800" : "opacity-70"}`}
                   >
-                    <span className={`inline-block h-3 w-3 rounded-full ${hs.dot}`} />
-                    <span className="font-semibold">
-                      {w.illuminated ? "🌟 " : ""}
-                      {w.name}
+                    <span className="flex items-center gap-2">
+                      <span className={`inline-block h-3 w-3 rounded-full ${hs.dot}`} />
+                      <span className="font-semibold">
+                        {w.illuminated ? "🌟 " : ""}
+                        {w.name}
+                      </span>
+                      <span className="text-xs">{hs.label}</span>
+                      {w.placedOn && (
+                        <span className="text-xs text-stone-400">→ {FURNITURE.find((f) => f.id === w.placedOn)?.name}</span>
+                      )}
+                      {w.exhausted && <span className="text-xs text-stone-500">(spent)</span>}
                     </span>
-                    <span className="text-xs">{hs.label}</span>
-                    {w.placedOn && (
-                      <span className="text-xs text-stone-400">→ {FURNITURE.find((f) => f.id === w.placedOn)?.name}</span>
+                    {persona && (
+                      <span className="text-[11px] text-amber-500/90">✦ {persona.abilityName}</span>
                     )}
-                    {w.exhausted && <span className="text-xs text-stone-500">(spent)</span>}
                   </button>
                 );
               })}

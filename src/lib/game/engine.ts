@@ -133,10 +133,21 @@ export function newGame(seed: number = Math.floor(Math.random() * 2 ** 31)): Gam
   };
   // Two documented alchemists drawn per game from the AlchemyTimelineMap roster.
   const roster = shuffled(state, WORKER_ROSTER);
-  state.workers = [
-    { id: "w1", name: roster[0].name, health: "healthy", illuminated: false, placedOn: null, exhausted: false },
-    { id: "w2", name: roster[1].name, health: "healthy", illuminated: false, placedOn: null, exhausted: false },
-  ];
+  state.workers = roster.slice(0, 2).map((p, i) => ({
+    id: `w${i + 1}`,
+    name: p.name,
+    persona: p.slug,
+    ability: p.ability,
+    health: "healthy" as const,
+    illuminated: false,
+    placedOn: null,
+    exhausted: false,
+  }));
+  // One-time ability grants (medicamenta tria, imperial patronage).
+  for (const w of state.workers) {
+    if (w.ability === "medicamenta-tria") state.resources.medicine += 2;
+    if (w.ability === "patronage") state.resources.gold += 3;
+  }
   // Escalation ladder: rounds 1-4 minor, 5-8 major, 9-10 catastrophic.
   const minor = shuffled(state, DISASTERS.filter((d) => d.severity === "minor").map((d) => d.id));
   const major = shuffled(state, DISASTERS.filter((d) => d.severity === "major").map((d) => d.id));
@@ -168,24 +179,43 @@ function runProduction(state: GameState): void {
         break;
       }
       case "alembic": {
-        const metals = (sick ? 1 : 2) + (state.upgrades.includes("advancedDistillation") ? 1 : 0);
+        let metals = (sick ? 1 : 2) + (state.upgrades.includes("advancedDistillation") ? 1 : 0);
+        let gold = sick ? 0 : 1;
+        let bonusIngredients = 0;
+        if (worker.ability === "systematic-still") metals += 1; // al-Razi
+        if (worker.ability === "essences") gold += 1; // al-Kindi
+        if (worker.ability === "sublimation") bonusIngredients = 1; // Zosimos
         state.resources.metals += metals;
-        const gold = sick ? 0 : 1;
         state.resources.gold += gold;
+        state.resources.ingredients += bonusIngredients;
+        const extras = [
+          gold ? "+1 Gold" : "(too sick to work the sales)",
+          bonusIngredients ? "+1 Ingredient (sublimation)" : "",
+        ]
+          .filter(Boolean)
+          .join(", ");
         log(state, {
           phase: "production",
           tone: "good",
-          text: `${worker.name} distills at the Alembic: +${metals} Metal${metals > 1 ? "s" : ""}${gold ? ", +1 Gold" : " (too sick to work the sales)"}.`,
+          text: `${worker.name} distills at the Alembic: +${metals} Metal${metals > 1 ? "s" : ""}${extras ? ", " + extras : ""}.`,
         });
         break;
       }
       case "crucible": {
         const recipe = RECIPES.find((r) => r.id === state.crucibleRecipe);
         if (!recipe) break;
-        if (canAfford(state.resources, recipe.cost)) {
-          state.resources = pay(state.resources, recipe.cost);
-          state.resources[recipe.yields] += 1;
-          log(state, { phase: "production", tone: "gold", text: `${worker.name} fires the Crucible: ${recipe.emoji} ${recipe.name} complete.` });
+        // Roger Bacon's experimental method: Potion costs 1 fewer Ingredient.
+        const cost = { ...recipe.cost };
+        if (worker.ability === "experiment" && recipe.id === "potion" && cost.ingredients) {
+          cost.ingredients = Math.max(0, cost.ingredients - 1);
+        }
+        if (canAfford(state.resources, cost)) {
+          state.resources = pay(state.resources, cost);
+          // Paracelsus' iatrochemistry: Medicine brews yield 2.
+          const yieldAmount = worker.ability === "iatrochemistry" && recipe.id === "medicine" ? 2 : 1;
+          state.resources[recipe.yields] += yieldAmount;
+          const note = yieldAmount > 1 ? ` ×${yieldAmount} (iatrochemistry)` : "";
+          log(state, { phase: "production", tone: "gold", text: `${worker.name} fires the Crucible: ${recipe.emoji} ${recipe.name}${note} complete.` });
         } else {
           log(state, { phase: "production", tone: "bad", text: `${worker.name} lacks the materials for ${recipe.name}. The Crucible stays cold.` });
         }
@@ -193,15 +223,24 @@ function runProduction(state: GameState): void {
       }
       case "researchDesk": {
         const next = RESEARCH_TRACK[state.upgrades.length];
+        // Jabir's corpus: research needs no Ingredient.
+        const freeResearch = worker.ability === "the-corpus";
         if (!next) {
           log(state, { phase: "production", tone: "neutral", text: `${worker.name} finds nothing new left to research.` });
-        } else if (state.resources.ingredients >= 1) {
-          state.resources.ingredients -= 1;
+        } else if (freeResearch || state.resources.ingredients >= 1) {
+          if (!freeResearch) state.resources.ingredients -= 1;
           state.upgrades.push(next.id);
           if (next.id === "safetyShower" || next.id === "neutralizationStation") {
             state.furniture.push(next.id);
           }
-          log(state, { phase: "production", tone: "gold", text: `${worker.name} completes research: ${next.emoji} ${next.name} (+1 VP).` });
+          // Gerard's translations: research also yields +1 Gold.
+          let goldNote = "";
+          if (worker.ability === "translations") {
+            state.resources.gold += 1;
+            goldNote = ", +1 Gold";
+          }
+          const freeNote = freeResearch ? " (corpus: no Ingredient)" : "";
+          log(state, { phase: "production", tone: "gold", text: `${worker.name} completes research: ${next.emoji} ${next.name} (+1 VP)${goldNote}${freeNote}.` });
         } else {
           log(state, { phase: "production", tone: "bad", text: `${worker.name} has no Ingredient to spend on research.` });
         }

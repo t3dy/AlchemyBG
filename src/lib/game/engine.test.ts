@@ -7,10 +7,17 @@ function play(state: GameState, ...actions: GameAction[]): GameState {
   return actions.reduce(reduce, state);
 }
 
-/** White-box helper: a fresh game with the given tiles already on the board. */
+/**
+ * White-box helper: a fresh game with the given tiles on the board and BOTH workers
+ * given a persona ability that never affects basic production (Toledo Translations
+ * fires only at the Reading Desk), plus resources reset — so exact-value assertions
+ * about the base economy aren't perturbed by random personas.
+ */
 function withTiles(seed: number, ...tiles: GameState["furniture"]): GameState {
   const s = newGame(seed);
   s.furniture.push(...tiles);
+  s.workers = s.workers.map((w) => ({ ...w, ability: "translations" as const }));
+  s.resources = { ...STARTING_RESOURCES };
   return s;
 }
 
@@ -50,7 +57,12 @@ describe("setup", () => {
     expect(s.phase).toBe("placement");
     expect(s.workers).toHaveLength(2);
     expect(s.workers.every((w) => w.health === "healthy")).toBe(true);
-    expect(s.resources).toEqual(STARTING_RESOURCES);
+    // Non-granted resources always match spec; gold/medicine may carry one-time
+    // persona grants (Maier +3 Gold, Tycho +2 Medicine) when those figures are drawn.
+    expect(s.resources.ingredients).toBe(STARTING_RESOURCES.ingredients);
+    expect(s.resources.metals).toBe(STARTING_RESOURCES.metals);
+    expect(s.resources.gold).toBeGreaterThanOrEqual(STARTING_RESOURCES.gold);
+    expect(s.resources.medicine).toBeGreaterThanOrEqual(STARTING_RESOURCES.medicine);
     expect(s.furniture).toEqual([]); // empty board — everything must be built
     expect(s.disasterDeck).toHaveLength(MAX_ROUNDS);
   });
@@ -301,5 +313,57 @@ describe("strategy parity (empty-board build orders)", () => {
     }
     // The parity guarantee: best and worst archetype medians within 3 VP.
     expect(report.spread, `spread ${report.spread}`).toBeLessThanOrEqual(3);
+  });
+});
+
+describe("persona abilities (historically grounded, small)", () => {
+  // White-box: force a specific persona onto a worker, then verify the effect.
+  function withPersona(seed: number, ability: string, ...tiles: GameState["furniture"]): GameState {
+    const s = newGame(seed);
+    s.furniture.push(...tiles);
+    s.workers[0] = { ...s.workers[0], ability: ability as GameState["workers"][number]["ability"] };
+    return s;
+  }
+
+  it("al-Razi's Systematic Distillation gives +1 Metal at the Alembic", () => {
+    const base = newGame(1);
+    let s = withPersona(1, "systematic-still", "alembic");
+    s = reduce(s, { type: "placeWorker", workerId: "w1", tileId: "alembic" });
+    s = reduce(s, { type: "confirmPlacement" });
+    // 2 base + 1 ability = 3 metals over the starting stock.
+    expect(s.resources.metals).toBe(base.resources.metals + 3);
+  });
+
+  it("Paracelsus' Iatrochemistry brews 2 Medicine", () => {
+    let s = withPersona(1, "iatrochemistry", "crucible");
+    s = reduce(s, { type: "placeWorker", workerId: "w1", tileId: "crucible", recipe: "medicine" });
+    const before = s.resources.medicine;
+    s = reduce(s, { type: "confirmPlacement" });
+    expect(s.resources.medicine).toBe(before + 2);
+  });
+
+  it("Jabir's Corpus makes research cost no Ingredient", () => {
+    let s = withPersona(1, "the-corpus", "researchDesk");
+    s.resources.ingredients = 0; // no ingredients at all
+    s = reduce(s, { type: "placeWorker", workerId: "w1", tileId: "researchDesk" });
+    s = reduce(s, { type: "confirmPlacement" });
+    expect(s.upgrades).toHaveLength(1); // researched anyway
+  });
+
+  it("Tycho and Maier grant one-time starting resources when present", () => {
+    // Search seeds for games that include each persona and check the grant landed.
+    let sawTycho = false, sawMaier = false;
+    for (let seed = 1; seed <= 60 && !(sawTycho && sawMaier); seed++) {
+      const s = newGame(seed);
+      if (s.workers.some((w) => w.ability === "medicamenta-tria")) {
+        sawTycho = true;
+        expect(s.resources.medicine).toBeGreaterThanOrEqual(STARTING_RESOURCES.medicine + 2);
+      }
+      if (s.workers.some((w) => w.ability === "patronage")) {
+        sawMaier = true;
+        expect(s.resources.gold).toBeGreaterThanOrEqual(STARTING_RESOURCES.gold + 3);
+      }
+    }
+    expect(sawTycho && sawMaier).toBe(true);
   });
 });
