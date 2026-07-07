@@ -42,8 +42,18 @@ export type FurnitureId =
   | "workbench"
   | "researchDesk"
   | "fumeHood"
+  | "patronsCabinet"
   | "safetyShower"
   | "neutralizationStation";
+
+/** A court commission: deliver the goods, gain reputation (VP). Second scoring path. */
+export interface Commission {
+  id: string;
+  name: string;
+  cost: Partial<Resources>;
+  vp: number;
+  flavor: string;
+}
 
 export interface FurnitureTile {
   id: FurnitureId;
@@ -116,6 +126,8 @@ export interface GameState {
   brokenFurniture: Partial<Record<FurnitureId, number>>;
   /** Recipe chosen for the worker on the crucible this round. */
   crucibleRecipe: RecipeId | null;
+  commissionDeck: string[];          // commission ids, shuffled; index 0 is current
+  commissionsVp: number;             // reputation earned from fulfilled commissions
   upgrades: ResearchUpgradeId[];     // research track progress, in order
   disasterDeck: string[];            // card ids, pre-shuffled by severity tier
   pendingDisaster: PendingDisaster | null;

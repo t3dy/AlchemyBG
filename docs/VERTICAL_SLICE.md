@@ -23,6 +23,18 @@ One complete, winnable, losable solo game in the browser.
 - [x] Save persists across reload; daily seed endpoint returns stable date-hashed seed
 - [x] No horizontal scroll at 375px (mobile)
 
+## Slice 1.5 (SHIPPED) — depth on the core loop
+
+Layered onto Slice 1 without changing its shape:
+- **Empty-board build-up**: 6 buildable tiles; opening is a gold-allocation puzzle
+- **Strategy-parity balance model** (`balance.ts`): shadow prices + a 5-archetype harness
+  gate; three economic lines dead-even (median 9), two specialist lines (safety, patronage)
+  at median 7 — spread 2 VP
+- **Historically-grounded persona abilities**: 9 roster alchemists, one ability each
+- **Scholarly equipment**: every tile cites Moran / Principe / Newman (see HISTORIOGRAPHY.md)
+- **Patron's Cabinet** second scoring path (court commissions) relieving the crucible
+  bottleneck — the item from the Slice 2 list below
+
 ## Slice 2 candidates (pick one, don't blend)
 
 1. **Deeper solo** — Apprentice replacement economy, Scar/Trauma tokens, 8-ailment

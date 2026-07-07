@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   BASE_BUILDABLE,
   BUILD_COST,
+  COMMISSION_BY_ID,
   FURNITURE,
   GRAND_TRANSMUTATION_ROUND,
   MAX_ROUNDS,
@@ -141,6 +142,12 @@ export default function Game() {
     const parts = RESOURCE_META.filter((m) => cost[m.key]).map((m) => `${cost[m.key]}${m.emoji}`);
     return parts.length ? parts.join(" + ") : "free";
   }
+
+  function commissionCostText(cost: Partial<Resources>): string {
+    return RESOURCE_META.filter((m) => cost[m.key]).map((m) => `${cost[m.key]}${m.emoji}`).join(" + ");
+  }
+
+  const currentCommission = s.commissionDeck.length ? COMMISSION_BY_ID.get(s.commissionDeck[0]) : undefined;
 
   function onRecipePick(recipe: RecipeId) {
     if (!selectedWorker) return;
@@ -336,6 +343,12 @@ export default function Game() {
                         {built && tile.passive && <span className="text-[10px] uppercase text-stone-500">passive</span>}
                       </div>
                       <p className="text-xs text-stone-300">{tile.description}</p>
+                      {fid === "patronsCabinet" && built && currentCommission && (
+                        <p className="rounded border border-amber-800/60 bg-amber-950/40 px-1.5 py-1 text-[11px] text-amber-200">
+                          Commission: <b>{currentCommission.name}</b> — deliver {commissionCostText(currentCommission.cost)} for{" "}
+                          <b>+{currentCommission.vp} VP</b>
+                        </p>
+                      )}
                       <p className="mt-auto text-[11px] italic text-stone-500">
                         &ldquo;{tile.flavor}&rdquo; — {tile.flavorSource}
                       </p>

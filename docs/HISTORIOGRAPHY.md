@@ -54,6 +54,7 @@ Design rule: flavor and mechanics may only assert what this scholarship supports
 | **Furnace Hood** (negate first sickening) | flue/hood over the furnace; Uraniborg mercury/arsenic/lead residues | Moran; courtly-laboratory studies |
 | **Quenching Trough** (free heal) | water against burns/fire in the furnace-house | Biringuccio (1540); Agricola (1556); Moran |
 | **Salt-of-Tartar Bath** (cancel an acid disaster) | fixed alkali vs. the mineral acids | Newman & Principe on reproducible chymical knowledge |
+| **Patron's Cabinet** (fulfill Commissions → VP) | the Kunstkammer; princely funding of laboratories; medicines, marvels, and gilded work as court goods | Bruce T. Moran, *The Alchemical World of the German Court* (1991) |
 | **Cohobation** (research upgrade: alembic +1) | redistilling the draw-off to enrich yield | Moran, *Distilling Knowledge* |
 | **The Chrysopoeia** (endgame gamble) | the **Philosophers' Tree** / *arbor Dianae*, reconstructed in the lab | Principe, *The Secrets of Alchemy* (2013) |
 | **Disaster deck** (real reagents: aqua fortis, mercury, arsenic, sulphur) | genuine hazards of chymical work | the danger is the counterpoint to chymistry's real efficacy |

@@ -1,4 +1,4 @@
-import type { AbilityId, DisasterCard, FurnitureId, FurnitureTile, ResearchUpgrade, Resources } from "./types";
+import type { AbilityId, Commission, DisasterCard, FurnitureId, FurnitureTile, ResearchUpgrade, Resources } from "./types";
 
 export const MAX_ROUNDS = 10;
 export const WIN_VP = 9;
@@ -128,7 +128,24 @@ export const BASE_BUILDABLE: FurnitureId[] = [
   "crucible",
   "researchDesk",
   "fumeHood",
+  "patronsCabinet",
 ];
+
+// Court commissions — the second scoring path. A worker at the Patron's Cabinet
+// delivers the goods for reputation (VP). Costs are priced in the shadow model
+// (docs/BALANCE_MODEL.md) at ~1.2–1.3 VP-eq of materials per 2 VP, so the cabinet
+// pays ≈ the baseline wage r and never dominates the crucible. Grounded in Moran's
+// work on courtly alchemy (The Alchemical World of the German Court, 1991).
+export const COMMISSIONS: Commission[] = [
+  { id: "pigments", name: "Pigments for the Elector", cost: { gold: 2, metals: 2 }, vp: 3, flavor: "Vermilion and verdigris for the court painters." },
+  { id: "aquaVitae", name: "Aqua Vitae for the Infirmary", cost: { gold: 1, ingredients: 3 }, vp: 2, flavor: "Distilled spirits against the winter fevers." },
+  { id: "gilding", name: "A Gilded Showpiece", cost: { gold: 2, metals: 1 }, vp: 2, flavor: "Base metal dressed as gold for the Kunstkammer." },
+  { id: "assay", name: "Assay the Mint's Silver", cost: { gold: 3 }, vp: 3, flavor: "The prince's coin must be proven pure." },
+  { id: "salts", name: "Medicinal Salts", cost: { gold: 2, ingredients: 2 }, vp: 3, flavor: "Sal mirabile and tartar for the apothecary." },
+  { id: "elixir", name: "A Cordial for the Duke", cost: { gold: 2, metals: 1 }, vp: 2, flavor: "A restorative worthy of a patron's table." },
+];
+
+export const COMMISSION_BY_ID = new Map(COMMISSIONS.map((c) => [c.id, c]));
 
 // Build costs, priced by the shadow-price model (docs/BALANCE_MODEL.md) so that no
 // single opening dominates: cheap tiles pay off slowly, dear tiles pay off faster.
@@ -138,6 +155,7 @@ export const BUILD_COST: Record<FurnitureId, Partial<Resources>> = {
   crucible: { gold: 2, metals: 1 },
   alembic: { gold: 2 },
   researchDesk: { gold: 2 },
+  patronsCabinet: { gold: 2 },
   // Safety tiles are placed for free the instant their research completes.
   safetyShower: {},
   neutralizationStation: {},
@@ -227,6 +245,17 @@ export const FURNITURE: FurnitureTile[] = [
       "Recipes hid behind Decknamen — cover-names like 'our Diana' and 'the Doves of Diana.' Reading them rightly is what let modern scholars run the operations again.",
     flavorSource: "Decknamen in the Philalethes/Starkey corpus, 17th c.",
     scholarship: "Lawrence M. Principe, The Secrets of Alchemy (2013), on decoding Decknamen",
+  },
+  {
+    id: "patronsCabinet",
+    name: "Patron's Cabinet",
+    emoji: "🏰",
+    description: "Fulfill the current court Commission: deliver its goods to gain reputation (VP).",
+    passive: false,
+    flavor:
+      "Alchemy lived in the courts — princes funded laboratories and prized the marvels, medicines, and gilded work they produced.",
+    flavorSource: "the Kunstkammer and the courtly laboratory, 16th–17th c.",
+    scholarship: "Bruce T. Moran, The Alchemical World of the German Court (1991)",
   },
   {
     id: "fumeHood",

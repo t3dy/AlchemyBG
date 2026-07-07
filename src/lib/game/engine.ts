@@ -16,6 +16,8 @@ import {
   RESEARCH_TRACK,
   WIN_VP,
   WORKER_ROSTER,
+  COMMISSIONS,
+  COMMISSION_BY_ID,
 } from "./data";
 import type {
   DisasterCard,
@@ -99,6 +101,7 @@ export function computeVp(state: GameState): number {
     state.resources.potions +
     state.resources.advancedPotions * 2 +
     state.upgrades.length +
+    state.commissionsVp +
     (state.grandSucceeded ? 4 : 0) +
     illuminated -
     dead
@@ -118,6 +121,8 @@ export function newGame(seed: number = Math.floor(Math.random() * 2 ** 31)): Gam
     furniture: [], // empty board — every tile must be built
     brokenFurniture: {},
     crucibleRecipe: null,
+    commissionDeck: [],
+    commissionsVp: 0,
     upgrades: [],
     disasterDeck: [],
     pendingDisaster: null,
@@ -153,6 +158,7 @@ export function newGame(seed: number = Math.floor(Math.random() * 2 ** 31)): Gam
   const major = shuffled(state, DISASTERS.filter((d) => d.severity === "major").map((d) => d.id));
   const cata = shuffled(state, DISASTERS.filter((d) => d.severity === "catastrophic").map((d) => d.id));
   state.disasterDeck = [...minor, ...major, ...cata.slice(0, MAX_ROUNDS - minor.length - major.length)];
+  state.commissionDeck = shuffled(state, COMMISSIONS.map((c) => c.id));
   log(state, {
     phase: "setup",
     tone: "neutral",
@@ -163,8 +169,8 @@ export function newGame(seed: number = Math.floor(Math.random() * 2 ** 31)): Gam
 
 // ── Production ────────────────────────────────────────────
 
-// Gather before refining, refine before brewing, research last.
-const PRODUCTION_ORDER: FurnitureId[] = ["workbench", "alembic", "crucible", "researchDesk"];
+// Gather before refining, refine before brewing, then research and sell to the court.
+const PRODUCTION_ORDER: FurnitureId[] = ["workbench", "alembic", "crucible", "researchDesk", "patronsCabinet"];
 
 function runProduction(state: GameState): void {
   for (const tileId of PRODUCTION_ORDER) {
@@ -243,6 +249,20 @@ function runProduction(state: GameState): void {
           log(state, { phase: "production", tone: "gold", text: `${worker.name} completes research: ${next.emoji} ${next.name} (+1 VP)${goldNote}${freeNote}.` });
         } else {
           log(state, { phase: "production", tone: "bad", text: `${worker.name} has no Ingredient to spend on research.` });
+        }
+        break;
+      }
+      case "patronsCabinet": {
+        const commission = state.commissionDeck.length ? COMMISSION_BY_ID.get(state.commissionDeck[0]) : undefined;
+        if (!commission) {
+          log(state, { phase: "production", tone: "neutral", text: `${worker.name} finds no commission awaiting at the Cabinet.` });
+        } else if (canAfford(state.resources, commission.cost)) {
+          state.resources = pay(state.resources, commission.cost);
+          state.commissionsVp += commission.vp;
+          state.commissionDeck.shift();
+          log(state, { phase: "production", tone: "gold", text: `${worker.name} fulfills a commission — ${commission.name} (+${commission.vp} VP reputation).` });
+        } else {
+          log(state, { phase: "production", tone: "bad", text: `${worker.name} cannot yet meet the commission: ${commission.name}.` });
         }
         break;
       }

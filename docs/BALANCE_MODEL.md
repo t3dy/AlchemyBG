@@ -62,26 +62,35 @@ prevention ratio leaves the band. Never weaken the gate to make tuning pass.
 
 ## 6. Strategy parity (empty-board build orders)
 
-The board starts **empty**; the opening is a gold-allocation puzzle. "All strategies
-approximately equally good" is enforced empirically by `strategyParity()`: four
-archetypal build orders (production / distillation / research / safety) each play many
-seeded games under a competent build-and-operate policy, and we require their score
-distributions to overlap. Current tuning (60 seeds, WIN_VP 8):
+The board starts **empty**; the opening is a gold-allocation puzzle across **six**
+buildable tiles. "All strategies approximately equally good" is enforced empirically by
+`strategyParity()`: five archetypal build orders each play many seeded games under a
+competent build-and-operate policy, and we require their score distributions to overlap.
+Current tuning (60 seeds, WIN_VP 9):
 
-| Archetype | median VP | win rate |
-|---|---|---|
-| production | 8 | ~57% |
-| distillation | 8 | ~57% |
-| research | 8 | ~57% |
-| safety | 6 | ~38% |
+| Archetype | median VP | win rate | identity |
+|---|---|---|---|
+| production | 9 | ~52% | workbench→crucible engine, advanced potions |
+| distillation | 9 | ~52% | alembic-led, metal/gold into potions |
+| research | 9 | ~52% | reading-desk VP + economic upgrades |
+| safety | 7 | ~18% | early Furnace Hood; a survival hedge |
+| patronage | 7 | ~23% | Patron's Cabinet; second scoring path (commissions) |
 
-**Median spread = 2 VP.** The three economic openings are statistically indistinguishable;
-safety trades ~19 points of win rate for variance reduction (early Fume Hood → fewer
-catastrophic losses), a deliberate risk/return identity rather than an imbalance — and
-exactly the mean-for-variance trade §4 predicts a hedging line should pay. The parity
-spread is the objective function to minimize when retuning `BUILD_COST` /
-`STARTING_RESOURCES`: if one order's median pulls >3 VP ahead, its costs are mispriced.
-The gate lives in `engine.test.ts` ("no build order dominates").
+**Median spread = 2 VP.** The three *economic* openings are statistically
+indistinguishable. Safety and patronage are deliberate **specialist** lines: each spends
+a build slot on its signature tile (Furnace Hood / Patron's Cabinet) instead of pure
+economy, trading ~2 VP of tempo for a distinct identity — survival variance-reduction, or
+a crucible-independent VP engine. That is the mean-for-variance / diversification trade §4
+predicts, not an imbalance. The parity spread is the objective function to minimize when
+retuning `BUILD_COST` / `STARTING_RESOURCES` / `COMMISSIONS`: if any order's median pulls
+>3 VP ahead, it's mispriced. The gate lives in `engine.test.ts` ("no build order dominates").
+
+**Second scoring path (relieving the crucible bottleneck).** Potion play alone caps near
+the win line because one crucible generates ≤1 VP/round. The Patron's Cabinet adds a
+parallel faucet: fulfill a court **Commission** (a gold-heavy material bundle) for VP.
+Commissions are priced at ~1.2–1.5 VP-eq of materials per 2–3 VP so the cabinet pays ≈ the
+baseline wage r and never dominates — the alembic's gold becomes VP without routing through
+the crucible, giving distillation/patronage lines their own outlet.
 
 Key tuning history (what the harness caught): removing the pre-built board first
 over-nerfed every line to a loss; the fix was raising starting capital and cutting build

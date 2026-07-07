@@ -138,20 +138,22 @@ export function grandExperimentEv(vMed = 1.5): number {
 // archetype's median pulls ahead, the build costs in data.ts are mispriced — the
 // parity spread is the objective function to minimize when tuning.
 
-import { BASE_BUILDABLE, BUILD_COST, WIN_VP } from "./data";
+import { BASE_BUILDABLE, BUILD_COST, COMMISSION_BY_ID, WIN_VP } from "./data";
 import { canWork, newGame, reduce } from "./engine";
 import type { FurnitureId, GameState } from "./types";
 
-export type Archetype = "production" | "distillation" | "research" | "safety";
+export type Archetype = "production" | "distillation" | "research" | "safety" | "patronage";
 
 // Priority build orders. Every viable engine needs the workbench→alembic→crucible
 // core (ingredients + metal + conversion); archetypes differ in WHEN they slot the
-// 4th tile (research VP engine vs. fume-hood safety) and their operating emphasis.
+// remaining tiles (research VP, fume-hood safety, or the patron's cabinet second
+// scoring path) and their operating emphasis.
 const BUILD_ORDER: Record<Archetype, FurnitureId[]> = {
   production: ["workbench", "crucible", "alembic", "researchDesk", "fumeHood"],
   distillation: ["alembic", "crucible", "workbench", "researchDesk", "fumeHood"],
   research: ["workbench", "researchDesk", "alembic", "crucible", "fumeHood"],
   safety: ["workbench", "crucible", "fumeHood", "alembic", "researchDesk"],
+  patronage: ["alembic", "workbench", "patronsCabinet", "crucible", "researchDesk"],
 };
 
 const BUILD_CAP: Record<Archetype, number> = {
@@ -159,7 +161,14 @@ const BUILD_CAP: Record<Archetype, number> = {
   distillation: 4,
   research: 4,
   safety: 5, // the hedge builds out fully — the Furnace Hood's survival edge affords it
+  patronage: 5, // full build-out: the cabinet's commission VP supplements potion/research VP
 };
+
+function commissionAffordable(s: GameState): boolean {
+  const c = s.commissionDeck.length ? COMMISSION_BY_ID.get(s.commissionDeck[0]) : undefined;
+  if (!c) return false;
+  return (Object.entries(c.cost) as [keyof typeof s.resources, number][]).every(([k, v]) => s.resources[k] >= v);
+}
 
 function canBuild(s: GameState, tile: FurnitureId): boolean {
   if (!BASE_BUILDABLE.includes(tile) || s.furniture.includes(tile)) return false;
@@ -209,6 +218,10 @@ export function simulateArchetype(seed: number, arch: Archetype): number {
       if (crucibleFree && R.medicine <= 1 && R.ingredients >= 1 && R.gold >= 1) {
         s = reduce(s, { type: "placeWorker", workerId: w.id, tileId: "crucible", recipe: "medicine" }); acted = true; continue;
       }
+      // The Patron's Cabinet is a second VP engine — fulfill a commission when it's paid for.
+      if (free("patronsCabinet") && commissionAffordable(s)) {
+        s = reduce(s, { type: "placeWorker", workerId: w.id, tileId: "patronsCabinet" }); acted = true; continue;
+      }
       // Research is a strong idle-round sink (VP + economy), until the track caps.
       if (free("researchDesk") && s.upgrades.length < 3 && R.ingredients >= 1) {
         s = reduce(s, { type: "placeWorker", workerId: w.id, tileId: "researchDesk" }); acted = true; continue;
@@ -248,7 +261,7 @@ export interface ParityReport {
 }
 
 export function strategyParity(seeds = 60): ParityReport {
-  const arches: Archetype[] = ["production", "distillation", "research", "safety"];
+  const arches: Archetype[] = ["production", "distillation", "research", "safety", "patronage"];
   const per = {} as ParityReport["perArchetype"];
   const medians: number[] = [];
   for (const a of arches) {

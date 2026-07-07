@@ -367,3 +367,32 @@ describe("persona abilities (historically grounded, small)", () => {
     expect(sawTycho && sawMaier).toBe(true);
   });
 });
+
+describe("patron's cabinet (second scoring path)", () => {
+  it("fulfilling a commission spends goods and grants reputation VP", async () => {
+    const { COMMISSION_BY_ID } = await import("./data");
+    let s = newGame(3);
+    s.furniture.push("patronsCabinet");
+    const commission = COMMISSION_BY_ID.get(s.commissionDeck[0])!;
+    // Guarantee affordability.
+    s.resources = { ...s.resources, gold: 9, metals: 9, ingredients: 9 };
+    const vpBefore = computeVp(s);
+    const deckBefore = s.commissionDeck.length;
+    s = reduce(s, { type: "placeWorker", workerId: "w1", tileId: "patronsCabinet" });
+    s = reduce(s, { type: "confirmPlacement" });
+    expect(s.commissionsVp).toBe(commission.vp);
+    expect(computeVp(s)).toBe(vpBefore + commission.vp);
+    expect(s.commissionDeck.length).toBe(deckBefore - 1); // advanced to next
+  });
+
+  it("does nothing if the current commission is unaffordable", () => {
+    let s = newGame(3);
+    s.furniture.push("patronsCabinet");
+    s.resources = { ingredients: 0, metals: 0, gold: 0, medicine: 0, potions: 0, advancedPotions: 0 };
+    const deckBefore = s.commissionDeck.length;
+    s = reduce(s, { type: "placeWorker", workerId: "w1", tileId: "patronsCabinet" });
+    s = reduce(s, { type: "confirmPlacement" });
+    expect(s.commissionsVp).toBe(0);
+    expect(s.commissionDeck.length).toBe(deckBefore); // unchanged
+  });
+});
