@@ -14,10 +14,12 @@ import {
   RECIPES,
   STARTING_RESOURCES,
   RESEARCH_TRACK,
-  WIN_VP,
   WORKER_ROSTER,
   COMMISSIONS,
   COMMISSION_BY_ID,
+  PATRON_BY_ID,
+  DEFAULT_PATRON,
+  SUSPICION,
 } from "./data";
 import type {
   DisasterCard,
@@ -25,10 +27,20 @@ import type {
   GameAction,
   GameState,
   LogEntry,
+  PatronId,
   Resources,
   Worker,
   WorkerHealth,
 } from "./types";
+
+const RESOURCE_KEYS: (keyof Resources)[] = [
+  "ingredients",
+  "metals",
+  "gold",
+  "medicine",
+  "potions",
+  "advancedPotions",
+];
 
 // ── RNG (mulberry32) ──────────────────────────────────────
 
@@ -110,12 +122,15 @@ export function computeVp(state: GameState): number {
 
 // ── Setup ─────────────────────────────────────────────────
 
-export function newGame(seed: number = Math.floor(Math.random() * 2 ** 31)): GameState {
+export function newGame(
+  seed: number = Math.floor(Math.random() * 2 ** 31),
+  patron?: PatronId,
+): GameState {
   const state: GameState = {
     seed,
     rngState: seed,
     round: 1,
-    phase: "placement",
+    phase: patron ? "placement" : "patronSelect",
     workers: [],
     resources: { ...STARTING_RESOURCES },
     furniture: [], // empty board — every tile must be built
@@ -132,6 +147,11 @@ export function newGame(seed: number = Math.floor(Math.random() * 2 ** 31)): Gam
     grandAttempted: false,
     grandSucceeded: false,
     vp: 0,
+    patron: patron ?? DEFAULT_PATRON,
+    standing: 0,
+    suspicion: 0,
+    seekingAudience: false,
+    trialOutcome: null,
     log: [],
     outcome: null,
     outcomeText: "",
@@ -159,12 +179,40 @@ export function newGame(seed: number = Math.floor(Math.random() * 2 ** 31)): Gam
   const cata = shuffled(state, DISASTERS.filter((d) => d.severity === "catastrophic").map((d) => d.id));
   state.disasterDeck = [...minor, ...major, ...cata.slice(0, MAX_ROUNDS - minor.length - major.length)];
   state.commissionDeck = shuffled(state, COMMISSIONS.map((c) => c.id));
+  if (patron) applyPatronSetup(state, patron);
+  return state;
+}
+
+/** Configure the chosen patron: contract terms, round-1 stipend, persona affinity. */
+function applyPatronSetup(state: GameState, patronId: PatronId): void {
+  state.patron = patronId;
+  const p = PATRON_BY_ID.get(patronId)!;
+  // Persona affinity: an alchemist tied to this court arrives with a foot in the door.
+  if (p.affinityPersona && state.workers.some((w) => w.persona === p.affinityPersona)) {
+    state.standing += 2;
+  }
   log(state, {
     phase: "setup",
     tone: "neutral",
-    text: `The lab is swept, the furnace lit. Chymistry is a craft of the hands: ten rounds to prove the work, reach ${WIN_VP} VP — and keep your alchemists alive.`,
+    text: `You take service with ${p.name} of ${p.court}. The contract: ${p.demand} Fail, or draw the court's suspicion, and face a trial.`,
   });
-  return state;
+  grantStipend(state); // round-1 stipend
+}
+
+function grantStipend(state: GameState): void {
+  const p = PATRON_BY_ID.get(state.patron)!;
+  const gained = RESOURCE_KEYS.filter((k) => p.stipend[k]);
+  for (const k of gained) state.resources[k] += p.stipend[k]!;
+  if (gained.length) {
+    const txt = gained.map((k) => `+${p.stipend[k]} ${k}`).join(", ");
+    log(state, { phase: "upkeep", tone: "good", text: `${p.name}'s stipend arrives: ${txt}.` });
+  }
+}
+
+function raiseSuspicion(state: GameState, amount: number, reason: string): void {
+  if (amount <= 0) return;
+  state.suspicion += amount;
+  log(state, { phase: "disaster", tone: "bad", text: `Suspicion at court rises (+${amount}): ${reason}. [${state.suspicion}/${PATRON_BY_ID.get(state.patron)!.suspicionThreshold}]` });
 }
 
 // ── Production ────────────────────────────────────────────
@@ -404,11 +452,33 @@ function applyDisaster(state: GameState, card: DisasterCard): void {
 
 // ── Upkeep ────────────────────────────────────────────────
 
+function goToTrial(state: GameState, reason: string): void {
+  const p = PATRON_BY_ID.get(state.patron)!;
+  state.phase = "gameOver";
+  state.outcome = "lost";
+  log(state, { phase: "upkeep", tone: "bad", text: `${reason} ${p.name} refers your case to the court.` });
+  if (state.standing >= SUSPICION.exileStandingFloor) {
+    state.trialOutcome = "exile";
+    state.outcomeText = `The court of ${p.name} finds against you — but your standing spares your life. You are stripped of the work and banished, fleeing to a distant refuge with what you can carry.`;
+  } else {
+    state.trialOutcome = "execution";
+    const end =
+      state.patron === "friedrich"
+        ? "You hang on Friedrich's gallows, an example to every adept who would defraud a prince."
+        : "The Hofgericht condemns you as a fraud and a poisoner; you burn at the stake, as Anna Zieglerin did in 1575.";
+    state.outcomeText = `The court of ${p.name} finds against you. ${end}`;
+  }
+  log(state, { phase: "upkeep", tone: "bad", text: state.outcomeText });
+}
+
 function runUpkeep(state: GameState): void {
+  const p = PATRON_BY_ID.get(state.patron)!;
   for (const w of state.workers) {
     if (w.health === "critical") {
       w.health = "dead";
       log(state, { phase: "upkeep", tone: "bad", text: `${w.name} succumbs to their wounds. (-1 VP)` });
+      // A death in the laboratory reads, at court, as poison.
+      raiseSuspicion(state, SUSPICION.workerDeath, `a death in ${w.name === state.workers[0].name ? "the" : "your"} laboratory`);
     }
     w.placedOn = null;
     w.exhausted = false;
@@ -419,33 +489,43 @@ function runUpkeep(state: GameState): void {
   state.crucibleRecipe = null;
   state.fumeHoodUsedThisRound = false;
   state.safetyShowerUsedThisRound = false;
+  state.seekingAudience = false;
   state.vp = computeVp(state);
 
-  const allDead = state.workers.every((w) => w.health === "dead");
-  if (allDead) {
+  // Losses first: both dead, or suspicion boils over into a trial.
+  if (state.workers.every((w) => w.health === "dead")) {
     state.phase = "gameOver";
     state.outcome = "lost";
     state.outcomeText = "Both alchemists are lost. The lab falls silent, the furnace burns out.";
     log(state, { phase: "upkeep", tone: "bad", text: state.outcomeText });
     return;
   }
-  if (state.vp >= WIN_VP) {
+  // Win FIRST: delivering the contract satisfies the patron and earns your independence,
+  // carrying you past the court's suspicion (the escape victory).
+  if (state.vp >= p.quota) {
     state.phase = "gameOver";
     state.outcome = "won";
-    state.outcomeText = `The Work is proven at ${state.vp} VP. Word of your laboratory spreads through every court in Europe.`;
+    state.outcomeText = `You deliver the Work — ${state.vp} of ${p.quota} — and ${p.name} makes good the contract: ${p.reward} You are free of any patron's changing humours.`;
     log(state, { phase: "upkeep", tone: "gold", text: state.outcomeText });
     return;
   }
-  if (state.round >= MAX_ROUNDS) {
-    state.phase = "gameOver";
-    state.outcome = "lost";
-    state.outcomeText = `Ten rounds gone, ${state.vp} of ${WIN_VP} VP earned. The work remains unfinished — the furnace goes cold.`;
-    log(state, { phase: "upkeep", tone: "bad", text: state.outcomeText });
+  if (state.suspicion >= p.suspicionThreshold) {
+    goToTrial(state, "The court's suspicion has boiled over.");
     return;
   }
+  // Deadline: the contract lapses, and reneging on a prince is prosecutable.
+  if (state.round >= p.deadline) {
+    goToTrial(state, `The deadline has passed with only ${state.vp} of ${p.quota} Work delivered.`);
+    return;
+  }
+  // Advance: stipend, then the rival network's periodic denunciation.
   state.round += 1;
-  state.phase = "placement";
   log(state, { phase: "placement", tone: "neutral", text: `— Round ${state.round} —` });
+  grantStipend(state);
+  if (state.round % p.denunciationEvery === 0) {
+    raiseSuspicion(state, p.denunciationAmount, `${p.court}'s rival network denounces you`);
+  }
+  state.phase = "placement";
 }
 
 // ── Reducer ───────────────────────────────────────────────
@@ -461,11 +541,38 @@ function clone(state: GameState): GameState {
 }
 
 export function reduce(prev: GameState, action: GameAction): GameState {
-  if (action.type === "newGame") return newGame(action.seed);
+  if (action.type === "newGame") return newGame(action.seed, action.patron);
   if (prev.phase === "gameOver") return prev;
+
+  // Patron selection: the only legal move before the work begins.
+  if (prev.phase === "patronSelect") {
+    if (action.type !== "choosePatron") return prev;
+    const state = clone(prev);
+    applyPatronSetup(state, action.patron);
+    state.phase = "placement";
+    return state;
+  }
+
   const state = clone(prev);
 
   switch (action.type) {
+    case "seekAudience": {
+      if (state.phase !== "placement") return prev;
+      const worker = state.workers.find((w) => w.id === action.workerId);
+      if (!worker || !canWork(worker) || worker.placedOn !== null) return prev;
+      worker.exhausted = true; // an audience at court spends the worker's action
+      state.seekingAudience = true;
+      state.suspicion = Math.max(0, state.suspicion - SUSPICION.audienceRelief);
+      state.standing += SUSPICION.audienceStanding;
+      const p = PATRON_BY_ID.get(state.patron)!;
+      log(state, { phase: "placement", tone: "good", text: `${worker.name} seeks an audience with ${p.name} — suspicion eased, standing gained. [suspicion ${state.suspicion}/${p.suspicionThreshold}]` });
+      return state;
+    }
+
+    case "cancelAudience": {
+      return prev; // audiences resolve immediately; nothing to cancel
+    }
+
     case "buildTile": {
       if (state.phase !== "placement") return prev;
       const worker = state.workers.find((w) => w.id === action.workerId);
@@ -529,6 +636,8 @@ export function reduce(prev: GameState, action: GameAction): GameState {
           tone: "bad",
           text: `${worker.name} attempts the Chrysopoeia — the sealed vessel bursts in the fire. ${worker.name} is CRITICAL. Heal them this round or lose them.`,
         });
+        // A very public failure feeds the whispers of fraud.
+        raiseSuspicion(state, SUSPICION.grandFailure, "a failed transmutation, seen by the court");
       }
       state.vp = computeVp(state);
       return state;

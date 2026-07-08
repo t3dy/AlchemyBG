@@ -138,9 +138,9 @@ export function grandExperimentEv(vMed = 1.5): number {
 // archetype's median pulls ahead, the build costs in data.ts are mispriced — the
 // parity spread is the objective function to minimize when tuning.
 
-import { BASE_BUILDABLE, BUILD_COST, COMMISSION_BY_ID, WIN_VP } from "./data";
+import { BASE_BUILDABLE, BUILD_COST, COMMISSION_BY_ID, PATRON_BY_ID, WIN_VP } from "./data";
 import { canWork, newGame, reduce } from "./engine";
-import type { FurnitureId, GameState } from "./types";
+import type { FurnitureId, GameState, PatronId } from "./types";
 
 export type Archetype = "production" | "distillation" | "research" | "safety" | "patronage";
 
@@ -178,12 +178,18 @@ function canBuild(s: GameState, tile: FurnitureId): boolean {
 }
 
 /** Play one game to completion under an archetype policy; return final VP. */
-export function simulateArchetype(seed: number, arch: Archetype): number {
-  let s = newGame(seed);
+export function simulateArchetype(seed: number, arch: Archetype, patron: PatronId = "julius"): number {
+  let s = newGame(seed, patron);
   const order = BUILD_ORDER[arch];
   const cap = BUILD_CAP[arch];
+  const threshold = PATRON_BY_ID.get(patron)!.suspicionThreshold;
   let guard = 0;
   while (s.phase !== "gameOver" && guard++ < 60) {
+    // Manage the court: if suspicion is near boiling over, a worker seeks audience.
+    if (s.suspicion >= threshold - 2 && s.vp < PATRON_BY_ID.get(patron)!.quota - 1) {
+      const cw = s.workers.find((w) => canWork(w) && w.placedOn === null && !w.exhausted);
+      if (cw) s = reduce(s, { type: "seekAudience", workerId: cw.id });
+    }
     // Late-game grand experiment when a spare potion allows it.
     if (s.round >= 9 && !s.grandAttempted) {
       const gw = s.workers.find((w) => w.health === "healthy" && w.placedOn === null && !w.exhausted);

@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "The Alchemist's Lab",
   description:
-    "A solo worker-placement board game of early modern alchemy: run the lab, brew the medicines, survive the disasters.",
+    "A solo board game of early modern alchemy: serve a prince, run the lab, deliver the Work — and keep the court's suspicion from the gallows.",
 };
 
 export default function RootLayout({

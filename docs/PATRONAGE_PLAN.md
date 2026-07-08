@@ -1,6 +1,15 @@
 # Design Plan — The Patronage & Rulers Layer
 
-**Status:** proposal / design plan (not yet implemented). Grounded in Tara Nummedal,
+**Status: v2.0 SHIPPED** (Phase A + parts of B/C). The core loop is live: choose one of
+five patrons, work their Contract (deliver the quota of Work by the deadline = the escape
+victory), manage a Standing/Suspicion track drained by deaths, failed transmutations, and
+the rival court's denunciations, seek an Audience to calm the court, and — if suspicion
+crosses the patron's threshold or the deadline lapses — face a graded **Trial** (exile if
+your standing holds, execution if not). See `data.ts` (PATRONS), `engine.ts` (suspicion /
+trial / stipend), and the balance harness (patron-aware sims). Phases B–D below
+(interrogation mini-game, precedent-scandal cards, multi-patron web) remain future work.
+
+Grounded in Tara Nummedal,
 *Anna Zieglerin and the Lion's Blood* (2019) and *Alchemy and Authority in the Holy
 Roman Empire* (2007); consistent with Ted's own Nummedal-grounded design in
 `EmblemRoguelike/docs/research/patrons.md` and `court_economy.js`.

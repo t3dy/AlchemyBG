@@ -1,10 +1,18 @@
 # ⚗️ The Alchemist's Lab
 
-A solo worker-placement board game of early modern alchemy, played in the browser.
-Run the laboratory, gather and distill, brew potions and medicines, survive an
-escalating ladder of historically real lab disasters — mercury vapor, aqua fortis,
-a crucible full of molten lead — and keep your two alchemists alive long enough to
-attempt the Grand Experiment.
+A solo board game of early modern alchemy, played in the browser (**v2.0**).
+
+You are two documented alchemists in the service of a **prince**. Choose your patron —
+Duke Julius, Emperor Rudolf II, Landgrave Moritz, the gallows-happy Duke Friedrich, or
+Rožmberk the refuge — and take their **Contract**: deliver the Work by the deadline and
+you earn your independence. Run the laboratory (gather, distil, assay, brew), survive an
+escalating ladder of real lab disasters (mercury vapor, aqua fortis, a crucible of molten
+lead), attempt the **Chrysopoeia** — and all the while keep the court's **Suspicion** from
+boiling over, or you face a **Trial**, and the gallows or the stake, as Anna Zieglerin did
+in 1575. Seek an audience to calm the court; a death in the lab reads as poison.
+
+Grounded throughout in the new historiography of alchemy — Moran, Principe, Newman, Roos,
+and Nummedal (see `docs/`).
 
 Built with Next.js (App Router) + TypeScript + Tailwind. The rules live in a pure,
 seeded, fully-tested engine (`src/lib/game/`), so every game is a deterministic

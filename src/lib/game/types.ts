@@ -95,10 +95,44 @@ export interface ResearchUpgrade {
 }
 
 export type Phase =
+  | "patronSelect" // choose your patron before the work begins
   | "placement"   // assign workers to furniture
   | "disaster"    // a disaster card is revealed; player chooses prevent / accept
   | "healing"     // spend medicine to heal workers
   | "gameOver";
+
+// ── Patronage layer (v2.0) — see docs/PATRONAGE_PLAN.md ────
+// Each patron is a historical prince/duke who funds the lab under a Contract and can,
+// if Suspicion runs high, put you on trial. Grounded in Nummedal.
+export type PatronId = "julius" | "rudolf" | "moritz" | "friedrich" | "rozmberk";
+
+export interface Patron {
+  id: PatronId;
+  name: string;
+  court: string;
+  /** Rich historical bio — the "person information," per the design plan. */
+  bio: string;
+  /** Resources granted at the start of each round. */
+  stipend: Partial<Resources>;
+  /** Work (VP) that must be delivered by the deadline to fulfill the contract. */
+  quota: number;
+  /** Round by which the quota must be met, or the patron prosecutes. */
+  deadline: number;
+  /** Suspicion at or above this triggers a Trial. */
+  suspicionThreshold: number;
+  /** A denunciation from the court's rival network fires every N rounds. */
+  denunciationEvery: number;
+  denunciationAmount: number;
+  /** Alchemist persona (slug) with a historical tie to this court; grants starting Standing. */
+  affinityPersona?: string;
+  affinityNote?: string;
+  /** One-line contract summary + reward flavor. */
+  demand: string;
+  reward: string;
+  risk: string;
+}
+
+export type TrialOutcome = "exile" | "execution" | null;
 
 export interface LogEntry {
   round: number;
@@ -137,6 +171,12 @@ export interface GameState {
   grandAttempted: boolean;
   grandSucceeded: boolean;
   vp: number;
+  // ── Patronage layer ──
+  patron: PatronId;
+  standing: number;          // court favor; high standing softens a Trial to exile
+  suspicion: number;         // court distrust; crossing the threshold triggers a Trial
+  seekingAudience: boolean;  // a worker is currying favor this round (set in placement)
+  trialOutcome: TrialOutcome;
   log: LogEntry[];
   outcome: "won" | "lost" | null;
   outcomeText: string;
@@ -151,4 +191,7 @@ export type GameAction =
   | { type: "healWorker"; workerId: string }     // spend 1 medicine (or the round's free shower heal)
   | { type: "endHealing" }                       // upkeep, next round
   | { type: "attemptGrandExperiment"; workerId: string }  // rounds 9-10 gamble, from placement phase
-  | { type: "newGame"; seed?: number };
+  | { type: "seekAudience"; workerId: string }   // spend a worker at court: -Suspicion, +Standing
+  | { type: "cancelAudience" }
+  | { type: "choosePatron"; patron: PatronId }   // from patronSelect phase
+  | { type: "newGame"; seed?: number; patron?: PatronId };

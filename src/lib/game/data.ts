@@ -1,4 +1,4 @@
-import type { AbilityId, Commission, DisasterCard, FurnitureId, FurnitureTile, ResearchUpgrade, Resources } from "./types";
+import type { AbilityId, Commission, DisasterCard, FurnitureId, FurnitureTile, Patron, PatronId, ResearchUpgrade, Resources } from "./types";
 
 export const MAX_ROUNDS = 10;
 export const WIN_VP = 9;
@@ -108,6 +108,107 @@ export const WORKER_ROSTER: WorkerPersona[] = [
 
 export const PERSONA_BY_SLUG = new Map(WORKER_ROSTER.map((p) => [p.slug, p]));
 
+// ── Patrons (v2.0) ────────────────────────────────────────
+// Historical princes who fund the lab under a Contract and can put you on trial.
+// Each is a distinct difficulty/strategy. Bios carry the "person information";
+// stat blocks are grounded in Nummedal (see docs/PATRONAGE_PLAN.md).
+export const PATRONS: Patron[] = [
+  {
+    id: "julius",
+    name: "Duke Julius",
+    court: "Braunschweig-Wolfenbüttel",
+    bio: "Julius (1528–1589), gout-stricken and pious, modernized his duchy's mines and founded a university — and practiced alchemy himself with his valets. He funded the alchemist Anna Zieglerin, then presided over her circle's prosecution in 1575. His duchess, Hedwig, ran a women's letter-network that policed the court's reputation.",
+    stipend: { ingredients: 1 },
+    quota: 9,
+    deadline: 10,
+    suspicionThreshold: 8,
+    denunciationEvery: 4,
+    denunciationAmount: 1,
+    affinityPersona: "paracelsus",
+    affinityNote: "Julius prized Paracelsian medicine.",
+    demand: "Deliver 9 Work by round 10.",
+    reward: "A landed title and your independence.",
+    risk: "Duchess Hedwig's network denounces you often; a moderate court.",
+  },
+  {
+    id: "rudolf",
+    name: "Emperor Rudolf II",
+    court: "Prague",
+    bio: "Rudolf II (1552–1612), reclusive Holy Roman Emperor, turned Prague into Europe's magnet for alchemists, astronomers, and artists — his Kunstkammer the wonder of the age. He kept Michael Maier as physician and Tycho Brahe as astronomer, but his court seethed with factions and his moods were dangerous.",
+    stipend: { gold: 3, ingredients: 1 },
+    quota: 11,
+    deadline: 10,
+    suspicionThreshold: 7,
+    denunciationEvery: 3,
+    denunciationAmount: 2,
+    affinityPersona: "michael-maier",
+    affinityNote: "Maier was Rudolf's own physician.",
+    demand: "Deliver 11 Work by round 10 — the Emperor demands much.",
+    reward: "Ennoblement and imperial favor.",
+    risk: "A rich but unstable, faction-ridden court; suspicion turns fast.",
+  },
+  {
+    id: "moritz",
+    name: "Landgrave Moritz",
+    court: "Hesse-Kassel",
+    bio: "Moritz 'the Learned' (1572–1632) was a polymath prince — composer, linguist, and chymist — who paid his adepts in recipes and legitimacy as much as gold, and tolerated far more than most. A scholar's court, patient with the slow work of the furnace.",
+    stipend: { gold: 1, ingredients: 1 },
+    quota: 8,
+    deadline: 10,
+    suspicionThreshold: 11,
+    denunciationEvery: 4,
+    denunciationAmount: 1,
+    affinityPersona: "michael-maier",
+    affinityNote: "Moritz corresponded with learned alchemists like Maier.",
+    demand: "Deliver 8 Work by round 10.",
+    reward: "Recipes, legitimacy, and a quiet freedom.",
+    risk: "Tolerant and safe, but the purse is thin.",
+  },
+  {
+    id: "friedrich",
+    name: "Duke Friedrich I",
+    court: "Württemberg",
+    bio: "Friedrich I (1557–1608) lured adepts with labs and estates — and hanged those who failed him. He granted Sendivogius a fief already promised to another, and had the fraud von Mühlenfels executed. His was the 'execution court': quick to reward, quicker to prosecute.",
+    stipend: { gold: 2 },
+    quota: 9,
+    deadline: 8,
+    suspicionThreshold: 5,
+    denunciationEvery: 3,
+    denunciationAmount: 2,
+    demand: "Deliver 9 Work by round 8 — and be quick.",
+    reward: "A fief, an estate, riches.",
+    risk: "The gallows court: it prosecutes at the first sign of fraud.",
+  },
+  {
+    id: "rozmberk",
+    name: "Vilém Rožmberk",
+    court: "Třeboň, Bohemia",
+    bio: "Vilém Rožmberk (1535–1592), the greatest lord of Bohemia, kept six private laboratories and gave sanctuary to alchemists in trouble elsewhere — including Dee and Kelley after they left Prague. The refuge patron: patient, protective, unhurried.",
+    stipend: { gold: 1 },
+    quota: 8,
+    deadline: 10,
+    suspicionThreshold: 13,
+    denunciationEvery: 5,
+    denunciationAmount: 1,
+    demand: "Deliver 8 Work by round 10.",
+    reward: "A place in his household, and safety.",
+    risk: "The safest court — but a lean stipend and a long grind.",
+  },
+];
+
+export const PATRON_BY_ID = new Map(PATRONS.map((p) => [p.id, p]));
+export const DEFAULT_PATRON: PatronId = "julius";
+
+// Suspicion tuning (see docs/PATRONAGE_PLAN.md §3.3–3.4).
+export const SUSPICION = {
+  workerDeath: 3,      // a dead assistant reads as poison
+  workerCritical: 1,   // a lab accident raises eyebrows
+  grandFailure: 2,     // a public failure looks like fraud
+  audienceRelief: 3,   // seeking audience calms the court
+  audienceStanding: 1, // ...and builds a little favor
+  exileStandingFloor: 4, // standing at/above this softens a Trial to exile
+};
+
 // The board starts EMPTY. Openings are gold-allocation puzzles: this stock buys
 // two cheap tiles, or one expensive tile plus operating capital.
 export const STARTING_RESOURCES: Resources = {
@@ -138,11 +239,11 @@ export const BASE_BUILDABLE: FurnitureId[] = [
 // and never dominates the crucible. Grounded in assay archaeology (Martinón-Torres &
 // Rehren) and Roos, The Salt of the Earth.
 export const COMMISSIONS: Commission[] = [
-  { id: "cupelRegulus", name: "Cupel the Regulus", cost: { gold: 2, metals: 2 }, vp: 3, flavor: "Blast air across the bone-ash cupel; base metals sink as litharge, a bright bead remains." },
+  { id: "cupelRegulus", name: "Cupel the Regulus", cost: { gold: 2, metals: 2 }, vp: 2, flavor: "Blast air across the bone-ash cupel; base metals sink as litharge, a bright bead remains." },
   { id: "partGold", name: "Part Gold from Silver", cost: { gold: 1, ingredients: 3 }, vp: 2, flavor: "Aqua fortis eats the silver and spares the gold — the parting acid does the sorting." },
   { id: "cementGold", name: "Cement the Gold", cost: { gold: 2, metals: 1 }, vp: 2, flavor: "Salt and brick-dust packed hot around the leaf draw the base metal out through the surface." },
-  { id: "fireAssay", name: "Fire-Assay the Ore", cost: { gold: 3 }, vp: 3, flavor: "Fusion, cupel, and the balance: the weight of the bead is the truth of the vein." },
-  { id: "sublimeSalt", name: "Sublime the Sal Ammoniac", cost: { gold: 2, ingredients: 2 }, vp: 3, flavor: "The volatile salt climbs the aludel and re-forms as a pure crystalline crust." },
+  { id: "fireAssay", name: "Fire-Assay the Ore", cost: { gold: 3 }, vp: 2, flavor: "Fusion, cupel, and the balance: the weight of the bead is the truth of the vein." },
+  { id: "sublimeSalt", name: "Sublime the Sal Ammoniac", cost: { gold: 2, ingredients: 2 }, vp: 2, flavor: "The volatile salt climbs the aludel and re-forms as a pure crystalline crust." },
   { id: "distilAquaFortis", name: "Distil Aqua Fortis", cost: { gold: 2, metals: 1 }, vp: 2, flavor: "Nitre and oil of vitriol in the retort yield the fuming acid that bites every metal but gold." },
 ];
 

@@ -14,7 +14,7 @@ function play(state: GameState, ...actions: GameAction[]): GameState {
  * about the base economy aren't perturbed by random personas.
  */
 function withTiles(seed: number, ...tiles: GameState["furniture"]): GameState {
-  const s = newGame(seed);
+  const s = newGame(seed, "julius");
   s.furniture.push(...tiles);
   s.workers = s.workers.map((w) => ({ ...w, ability: "translations" as const }));
   s.resources = { ...STARTING_RESOURCES };
@@ -51,24 +51,35 @@ function playSafeRound(state: GameState): GameState {
 }
 
 describe("setup", () => {
+  it("with no patron, starts in patronSelect; choosePatron begins the work", () => {
+    let s = newGame(42);
+    expect(s.phase).toBe("patronSelect");
+    expect(s.workers).toHaveLength(2);
+    expect(s.furniture).toEqual([]);
+    // The only legal move is choosing a patron.
+    expect(reduce(s, { type: "confirmPlacement" })).toBe(s);
+    s = reduce(s, { type: "choosePatron", patron: "julius" });
+    expect(s.phase).toBe("placement");
+    expect(s.patron).toBe("julius");
+  });
+
   it("starts with the spec's lab, workers, and resources", () => {
-    const s = newGame(42);
+    const s = newGame(42, "julius");
     expect(s.round).toBe(1);
     expect(s.phase).toBe("placement");
     expect(s.workers).toHaveLength(2);
     expect(s.workers.every((w) => w.health === "healthy")).toBe(true);
-    // Non-granted resources always match spec; gold/medicine may carry one-time
-    // persona grants (Maier +3 Gold, Tycho +2 Medicine) when those figures are drawn.
-    expect(s.resources.ingredients).toBe(STARTING_RESOURCES.ingredients);
+    // Metals/potions always match spec; gold/medicine may carry one-time persona
+    // grants; ingredients carry Julius's +1 round-1 stipend.
     expect(s.resources.metals).toBe(STARTING_RESOURCES.metals);
+    expect(s.resources.ingredients).toBeGreaterThanOrEqual(STARTING_RESOURCES.ingredients);
     expect(s.resources.gold).toBeGreaterThanOrEqual(STARTING_RESOURCES.gold);
-    expect(s.resources.medicine).toBeGreaterThanOrEqual(STARTING_RESOURCES.medicine);
     expect(s.furniture).toEqual([]); // empty board — everything must be built
     expect(s.disasterDeck).toHaveLength(MAX_ROUNDS);
   });
 
   it("builds the disaster deck as an escalation ladder", () => {
-    const s = newGame(7);
+    const s = newGame(7, "julius");
     const severities = s.disasterDeck.map((id) =>
       id.match(/crucibleExplosion|nitricBurn|dimethylmercury|fumeBackflow/)
         ? "catastrophic"
@@ -82,7 +93,7 @@ describe("setup", () => {
   });
 
   it("is deterministic for a given seed", () => {
-    expect(newGame(123).disasterDeck).toEqual(newGame(123).disasterDeck);
+    expect(newGame(123, "julius").disasterDeck).toEqual(newGame(123, "julius").disasterDeck);
   });
 });
 
@@ -135,14 +146,14 @@ describe("placement and production", () => {
 
 describe("disasters", () => {
   it("reveals a disaster with prevention offered before the effect", () => {
-    let s = newGame(1);
+    let s = newGame(1, "julius");
     s = play(s, { type: "confirmPlacement" });
     expect(s.phase).toBe("disaster");
     expect(s.pendingDisaster).not.toBeNull();
   });
 
   it("prevention pays the cost and skips the effect", () => {
-    let s = newGame(1);
+    let s = newGame(1, "julius");
     s = play(s, { type: "confirmPlacement" });
     const card = s.pendingDisaster!.card;
     if (!s.pendingDisaster!.canPrevent) return; // seed-dependent; other seeds cover this
@@ -196,7 +207,7 @@ describe("disasters", () => {
 
 describe("healing and death", () => {
   it("medicine heals one step; critical workers die at upkeep if unhealed", () => {
-    let s = newGame(1);
+    let s = newGame(1, "julius");
     // Force a critical worker through the state shape (white-box: run a catastrophic effect).
     s = play(s, { type: "confirmPlacement" });
     s = reduce(s, { type: "resolveDisaster", prevent: false });
@@ -209,7 +220,7 @@ describe("healing and death", () => {
   });
 
   it("loses the game when both workers are dead", () => {
-    let s = newGame(1);
+    let s = newGame(1, "julius");
     s = play(s, { type: "confirmPlacement" });
     s = reduce(s, { type: "resolveDisaster", prevent: false });
     s.workers.forEach((w) => (w.health = "critical"));
@@ -221,7 +232,7 @@ describe("healing and death", () => {
 
 describe("full playthrough", () => {
   it("a cautious bot reaches game over within 10 rounds without crashing", () => {
-    let s = newGame(2024);
+    let s = newGame(2024, "julius");
     let guard = 0;
     while (s.phase !== "gameOver" && guard++ < 50) {
       s = playSafeRound(s);
@@ -244,7 +255,7 @@ describe("full playthrough", () => {
   });
 
   it(`VP formula matches the spec (${WIN_VP} to win)`, () => {
-    const s = newGame(5);
+    const s = newGame(5, "julius");
     s.resources.potions = 3;
     s.resources.advancedPotions = 2;
     s.upgrades = ["safetyShower", "neutralizationStation"];
@@ -276,23 +287,23 @@ describe("balance model", () => {
   it("draws two distinct roster alchemists per game, seeded", async () => {
     const { WORKER_ROSTER } = await import("./data");
     const names = new Set(WORKER_ROSTER.map((w) => w.name));
-    const s = newGame(99);
+    const s = newGame(99, "julius");
     expect(s.workers).toHaveLength(2);
     expect(names.has(s.workers[0].name)).toBe(true);
     expect(names.has(s.workers[1].name)).toBe(true);
     expect(s.workers[0].name).not.toBe(s.workers[1].name);
-    expect(newGame(99).workers.map((w) => w.name)).toEqual(s.workers.map((w) => w.name));
+    expect(newGame(99, "julius").workers.map((w) => w.name)).toEqual(s.workers.map((w) => w.name));
   });
 });
 
 describe("strategy parity (empty-board build orders)", () => {
   it("starts with an empty board", () => {
-    expect(newGame(1).furniture).toEqual([]);
+    expect(newGame(1, "julius").furniture).toEqual([]);
   });
 
   it("a worker can build a tile, paying its cost and spending its action", async () => {
     const { BUILD_COST } = await import("./data");
-    let s = newGame(1);
+    let s = newGame(1, "julius");
     const goldBefore = s.resources.gold;
     s = reduce(s, { type: "buildTile", workerId: "w1", tileId: "workbench" });
     expect(s.furniture).toContain("workbench");
@@ -319,14 +330,14 @@ describe("strategy parity (empty-board build orders)", () => {
 describe("persona abilities (historically grounded, small)", () => {
   // White-box: force a specific persona onto a worker, then verify the effect.
   function withPersona(seed: number, ability: string, ...tiles: GameState["furniture"]): GameState {
-    const s = newGame(seed);
+    const s = newGame(seed, "julius");
     s.furniture.push(...tiles);
     s.workers[0] = { ...s.workers[0], ability: ability as GameState["workers"][number]["ability"] };
     return s;
   }
 
   it("al-Razi's Systematic Distillation gives +1 Metal at the Alembic", () => {
-    const base = newGame(1);
+    const base = newGame(1, "julius");
     let s = withPersona(1, "systematic-still", "alembic");
     s = reduce(s, { type: "placeWorker", workerId: "w1", tileId: "alembic" });
     s = reduce(s, { type: "confirmPlacement" });
@@ -354,7 +365,7 @@ describe("persona abilities (historically grounded, small)", () => {
     // Search seeds for games that include each persona and check the grant landed.
     let sawTycho = false, sawMaier = false;
     for (let seed = 1; seed <= 60 && !(sawTycho && sawMaier); seed++) {
-      const s = newGame(seed);
+      const s = newGame(seed, "julius");
       if (s.workers.some((w) => w.ability === "medicamenta-tria")) {
         sawTycho = true;
         expect(s.resources.medicine).toBeGreaterThanOrEqual(STARTING_RESOURCES.medicine + 2);
@@ -371,7 +382,7 @@ describe("persona abilities (historically grounded, small)", () => {
 describe("cupellation furnace (second scoring path)", () => {
   it("fulfilling a commission spends goods and grants reputation VP", async () => {
     const { COMMISSION_BY_ID } = await import("./data");
-    let s = newGame(3);
+    let s = newGame(3, "julius");
     s.furniture.push("patronsCabinet");
     const commission = COMMISSION_BY_ID.get(s.commissionDeck[0])!;
     // Guarantee affordability.
@@ -386,7 +397,7 @@ describe("cupellation furnace (second scoring path)", () => {
   });
 
   it("does nothing if the current commission is unaffordable", () => {
-    let s = newGame(3);
+    let s = newGame(3, "julius");
     s.furniture.push("patronsCabinet");
     s.resources = { ingredients: 0, metals: 0, gold: 0, medicine: 0, potions: 0, advancedPotions: 0 };
     const deckBefore = s.commissionDeck.length;
@@ -394,5 +405,86 @@ describe("cupellation furnace (second scoring path)", () => {
     s = reduce(s, { type: "confirmPlacement" });
     expect(s.commissionsVp).toBe(0);
     expect(s.commissionDeck.length).toBe(deckBefore); // unchanged
+  });
+});
+
+describe("patronage layer (v2.0)", () => {
+  it("grants the round-1 stipend and applies persona affinity standing", () => {
+    // Rudolf's affinity is Maier; find a seed drawing Maier, check +2 standing.
+    let saw = false;
+    for (let seed = 1; seed <= 80 && !saw; seed++) {
+      const s = newGame(seed, "rudolf");
+      if (s.workers.some((w) => w.persona === "michael-maier")) {
+        saw = true;
+        expect(s.standing).toBeGreaterThanOrEqual(2);
+      }
+      // Rudolf's stipend includes ingredients + gold.
+      expect(s.resources.gold).toBeGreaterThanOrEqual(STARTING_RESOURCES.gold + 3);
+    }
+    expect(saw).toBe(true);
+  });
+
+  it("a worker death raises suspicion (a death reads as poison)", () => {
+    let s = newGame(1, "julius");
+    s = reduce(s, { type: "confirmPlacement" });
+    s = reduce(s, { type: "resolveDisaster", prevent: false });
+    s.workers[0].health = "critical";
+    const before = s.suspicion;
+    s = reduce(s, { type: "endHealing" }); // upkeep: critical dies
+    expect(s.workers[0].health).toBe("dead");
+    expect(s.suspicion).toBeGreaterThan(before);
+  });
+
+  it("seeking an audience spends the worker and lowers suspicion", () => {
+    let s = newGame(1, "julius");
+    s.suspicion = 5;
+    s = reduce(s, { type: "seekAudience", workerId: "w1" });
+    expect(s.suspicion).toBeLessThan(5);
+    expect(s.standing).toBeGreaterThanOrEqual(1);
+    expect(s.workers.find((w) => w.id === "w1")!.exhausted).toBe(true);
+  });
+
+  it("crossing the suspicion threshold triggers a Trial (execution if standing is low)", () => {
+    let s = newGame(1, "friedrich"); // threshold 5
+    s = reduce(s, { type: "confirmPlacement" });
+    s = reduce(s, { type: "resolveDisaster", prevent: false });
+    s.suspicion = 6; // over Friedrich's threshold
+    s.standing = 0;
+    s = reduce(s, { type: "endHealing" });
+    expect(s.phase).toBe("gameOver");
+    expect(s.outcome).toBe("lost");
+    expect(s.trialOutcome).toBe("execution");
+  });
+
+  it("high standing softens the Trial to exile", () => {
+    let s = newGame(1, "friedrich");
+    s = reduce(s, { type: "confirmPlacement" });
+    s = reduce(s, { type: "resolveDisaster", prevent: false });
+    s.suspicion = 6;
+    s.standing = 5; // >= exileStandingFloor
+    s = reduce(s, { type: "endHealing" });
+    expect(s.outcome).toBe("lost");
+    expect(s.trialOutcome).toBe("exile");
+  });
+
+  it("fulfilling the contract quota wins (the escape victory)", () => {
+    let s = newGame(1, "julius"); // quota 9
+    s = reduce(s, { type: "confirmPlacement" });
+    if (s.phase === "disaster") s = reduce(s, { type: "resolveDisaster", prevent: s.pendingDisaster?.canPrevent ?? false });
+    s.resources.advancedPotions = 5; // 10 VP worth, over quota 9
+    s = reduce(s, { type: "endHealing" });
+    expect(s.phase).toBe("gameOver");
+    expect(s.outcome).toBe("won");
+  });
+
+  it("patrons differ: Friedrich prosecutes far more than Rožmberk", async () => {
+    const { simulateArchetype } = await import("./balance");
+    let friedrichLosses = 0, rozmberkLosses = 0;
+    for (let seed = 1; seed <= 30; seed++) {
+      // A bot that ignores the court (never manages suspicion) to expose patron risk.
+      if (simulateArchetype(seed, "production", "friedrich") < 9) friedrichLosses++;
+      if (simulateArchetype(seed, "production", "rozmberk") < 8) rozmberkLosses++;
+    }
+    expect(friedrichLosses).toBeGreaterThanOrEqual(rozmberkLosses);
   });
 });

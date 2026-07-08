@@ -8,9 +8,10 @@ import {
   FURNITURE,
   GRAND_TRANSMUTATION_ROUND,
   MAX_ROUNDS,
+  PATRONS,
+  PATRON_BY_ID,
   PERSONA_BY_SLUG,
   RECIPES,
-  WIN_VP,
 } from "@/lib/game/data";
 import { canAfford, canWork, newGame, reduce } from "@/lib/game/engine";
 import type {
@@ -42,6 +43,11 @@ const RESOURCE_META: { key: keyof Resources; label: string; emoji: string }[] = 
 ];
 
 const PHASE_META: Record<string, { label: string; color: string; hint: string }> = {
+  patronSelect: {
+    label: "Choose a Patron",
+    color: "bg-purple-900/60 border-purple-700 text-purple-200",
+    hint: "Every alchemist works for a prince. Choose your patron — and your contract.",
+  },
   placement: {
     label: "Placement",
     color: "bg-sky-900/60 border-sky-700 text-sky-200",
@@ -105,6 +111,7 @@ export default function Game() {
     }
   }, [s]);
   const phaseMeta = PHASE_META[s.phase];
+  const patron = PATRON_BY_ID.get(s.patron)!;
   const placedCount = s.workers.filter((w) => w.placedOn !== null).length;
   const availableWorkers = s.workers.filter((w) => canWork(w) && w.placedOn === null);
   const grandAvailable =
@@ -174,6 +181,55 @@ export default function Game() {
     setSelectedWorker(null);
   }
 
+  // ── Patron selection screen (v2.0) ──
+  if (s.phase === "patronSelect") {
+    return (
+      <div className="mx-auto flex min-h-screen max-w-5xl flex-col gap-4 p-4 text-amber-50">
+        <header className="rounded-xl border-2 border-amber-800/60 bg-stone-900/80 px-4 py-3">
+          <h1 className="font-serif text-2xl font-bold tracking-wide text-amber-200">⚗️ The Alchemist&apos;s Lab</h1>
+          <p className="mt-1 text-sm text-purple-200">
+            An alchemist works for a prince. Choose your patron — their stipend funds the lab, their
+            contract sets your task, and their court can put you on trial. You play{" "}
+            <b>{s.workers.map((w) => w.name).join(" & ")}</b>.
+          </p>
+        </header>
+        <div className="grid gap-3 md:grid-cols-2">
+          {PATRONS.map((p) => {
+            const affinity = p.affinityPersona && s.workers.some((w) => w.persona === p.affinityPersona);
+            return (
+              <button
+                key={p.id}
+                onClick={() => {
+                  setState(reduce(s, { type: "choosePatron", patron: p.id }));
+                  setSelectedWorker(null);
+                }}
+                className="flex flex-col gap-2 rounded-xl border-2 border-amber-800/70 bg-stone-950 p-4 text-left transition hover:border-amber-500 hover:bg-amber-950/30"
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="font-serif text-lg font-semibold text-amber-100">{p.name}</span>
+                  <span className="text-xs text-stone-400">{p.court}</span>
+                </div>
+                <p className="text-xs leading-relaxed text-stone-300">{p.bio}</p>
+                <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-amber-200/90">
+                  <span>📜 {p.demand}</span>
+                  <span>🎁 {p.reward}</span>
+                  <span>💰 Stipend: {commissionCostText(p.stipend) || "—"}/round</span>
+                  <span>⚖️ Trial at {p.suspicionThreshold} suspicion</span>
+                </div>
+                <p className="text-[11px] italic text-stone-500">⚠ {p.risk}</p>
+                {affinity && (
+                  <p className="text-[11px] text-emerald-400">
+                    ✦ {p.affinityNote} — you begin with their favor (+2 standing).
+                  </p>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-4 p-4 text-amber-50">
       {/* Header */}
@@ -194,7 +250,7 @@ export default function Game() {
             {phaseMeta.label}
           </span>
           <span className="rounded-lg border border-amber-500 bg-amber-950 px-3 py-1 text-amber-200">
-            🏆 <b>{s.vp}</b>/{WIN_VP} VP
+            🏆 <b>{s.vp}</b>/{patron.quota} Work
           </span>
           <button
             onClick={startNew}
@@ -224,6 +280,34 @@ export default function Game() {
             <span className="text-xs text-stone-400">{m.label}</span>
           </div>
         ))}
+      </div>
+
+      {/* Court / patronage bar */}
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-purple-900/70 bg-purple-950/30 px-4 py-2 text-sm">
+        <span className="font-serif text-purple-100" title={patron.bio}>
+          🏛️ {patron.name} <span className="text-xs text-purple-300/80">of {patron.court}</span>
+        </span>
+        <span className="text-xs text-purple-200/90">
+          Contract: {s.vp}/{patron.quota} Work by round {patron.deadline}
+        </span>
+        <span className="text-xs text-emerald-300">🤝 Standing {s.standing}</span>
+        <span
+          className="flex items-center gap-1.5 text-xs"
+          title="A death, a failed transmutation, or the rival court's denunciations raise Suspicion. Cross the threshold and you face a trial."
+        >
+          <span className={s.suspicion >= patron.suspicionThreshold - 2 ? "text-red-400" : "text-amber-300"}>
+            👁️ Suspicion
+          </span>
+          <span className="flex h-2 w-24 overflow-hidden rounded-full bg-stone-800">
+            <span
+              className={`h-full ${s.suspicion >= patron.suspicionThreshold - 2 ? "bg-red-600" : "bg-amber-600"}`}
+              style={{ width: `${Math.min(100, (s.suspicion / patron.suspicionThreshold) * 100)}%` }}
+            />
+          </span>
+          <span className="tabular-nums text-stone-400">
+            {s.suspicion}/{patron.suspicionThreshold}
+          </span>
+        </span>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_minmax(280px,360px)]">
@@ -426,9 +510,21 @@ export default function Game() {
                   🌟 The Chrysopoeia (1🧪+2⛏️+1🪙 — all or nothing)
                 </button>
               )}
+              {selectedWorker && (
+                <button
+                  onClick={() => {
+                    dispatchAndClear({ type: "seekAudience", workerId: selectedWorker });
+                    setSelectedWorker(null);
+                  }}
+                  className="rounded-xl border-2 border-purple-600 bg-purple-950/70 px-4 py-2 font-serif font-semibold text-purple-100 hover:bg-purple-900"
+                  title={`Send the selected alchemist to court instead of the lab: −${3} Suspicion, +1 Standing. Costs their action this round.`}
+                >
+                  🏛️ Seek Audience (−suspicion)
+                </button>
+              )}
               {availableWorkers.length > 0 && !selectedWorker && (
                 <span className="text-sm text-stone-400">
-                  {availableWorkers.length} alchemist{availableWorkers.length > 1 ? "s" : ""} idle
+                  {availableWorkers.length} alchemist{availableWorkers.length > 1 ? "s" : ""} idle · select one to place or send to court
                 </span>
               )}
             </div>
@@ -515,11 +611,21 @@ export default function Game() {
         <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/80 p-4">
           <div
             className={`w-full max-w-md rounded-2xl border-4 p-6 text-center shadow-2xl ${
-              s.outcome === "won" ? "border-amber-500 bg-amber-950" : "border-stone-600 bg-stone-950"
+              s.outcome === "won"
+                ? "border-amber-500 bg-amber-950"
+                : s.trialOutcome === "execution"
+                  ? "border-red-800 bg-red-950/60"
+                  : "border-stone-600 bg-stone-950"
             }`}
           >
             <h3 className="font-serif text-3xl font-bold text-amber-100">
-              {s.outcome === "won" ? "🌟 Opus Perfectum" : "🕯️ The Fire Goes Out"}
+              {s.outcome === "won"
+                ? "🌟 Your Independence"
+                : s.trialOutcome === "execution"
+                  ? "⚖️ The Day of Justice"
+                  : s.trialOutcome === "exile"
+                    ? "🚪 Banished"
+                    : "🕯️ The Fire Goes Out"}
             </h3>
             <p className="mt-3 text-amber-200/90">{s.outcomeText}</p>
             <p className="mt-2 text-sm text-stone-400">
