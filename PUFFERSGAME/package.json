@@ -1,0 +1,11 @@
+{
+  "name": "puffers",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Puffers — a comical alchemy-lab heat-juggling puzzle. Prototype lab: three genre variants of one simulation.",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test src/sim.test.mjs",
+    "serve": "node -e \"import('node:http').then(h=>import('node:fs').then(f=>h.createServer((q,r)=>{let p=q.url==='/'?'/dist/index.html':q.url;try{r.setHeader('content-type',p.endsWith('.html')?'text/html':'text/plain');r.end(f.readFileSync('.'+p))}catch{r.statusCode=404;r.end('404')}}).listen(4173,()=>console.log('http://localhost:4173'))))\""
+  }
+}
