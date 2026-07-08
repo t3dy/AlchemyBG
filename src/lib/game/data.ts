@@ -1,4 +1,4 @@
-import type { AbilityId, Commission, DisasterCard, FurnitureId, FurnitureTile, Patron, PatronId, ResearchUpgrade, Resources } from "./types";
+import type { AbilityId, Commission, CourtEvent, DisasterCard, FurnitureId, FurnitureTile, Patron, PatronId, ResearchUpgrade, Resources } from "./types";
 
 export const MAX_ROUNDS = 10;
 export const WIN_VP = 9;
@@ -198,6 +198,85 @@ export const PATRONS: Patron[] = [
 
 export const PATRON_BY_ID = new Map(PATRONS.map((p) => [p.id, p]));
 export const DEFAULT_PATRON: PatronId = "julius";
+
+// Court events (v2.1) — ruler interactions fired at the start of set rounds. Each is a
+// real choice grounded in Nummedal's Zieglerin case (docs/PATRONAGE_PLAN.md §3.5).
+export const EVENT_ROUNDS = [3, 6];
+
+export const COURT_EVENTS: CourtEvent[] = [
+  {
+    id: "meddling",
+    name: "The Patron Meddles",
+    flavor: "Your patron descends to the laboratory to try the work himself — as Duke Julius did with his valets — and loads you with his hangers-on.",
+    source: "Nummedal, Zieglerin, ch.3",
+    options: [
+      { label: "Indulge him (he provisions the lab)", gain: { ingredients: 2 }, suspicion: 2, resultText: "He crowds the bench and roasts arsenic dangerously — but leaves stores behind. If he poisons himself, you will be blamed." },
+      { label: "Gently steer him away", standing: -1, resultText: "You keep the work clean, but the slight cools his favor a little." },
+    ],
+  },
+  {
+    id: "demonstration",
+    name: "A Demonstration is Demanded",
+    flavor: "The court gathers in the Lusthaus; the patron bids you show the work — now.",
+    source: "Nummedal, Zieglerin, ch.4",
+    options: [
+      { label: "Perform a proof (spend 2 Gold)", requires: { gold: 2 }, standing: 2, suspicion: -2, resultText: "A convincing demonstration; the court is impressed and the whispers quiet." },
+      { label: "Beg more time", suspicion: 2, resultText: "The court mutters. Delay reads as a cheat's excuse." },
+    ],
+  },
+  {
+    id: "greaterAdept",
+    name: "The Lure of a Greater Adept",
+    flavor: "You could promise the patron access to a legendary master greater than yourself — as Anna dangled the shadowy 'Count Carl,' supposed son of Paracelsus.",
+    source: "Nummedal, Zieglerin, ch.4, ch.6",
+    options: [
+      { label: "Promise him the great adept", standing: 3, suspicion: 3, resultText: "The patron is dazzled and writes a letter of invitation — but if the adept proves a fiction, it is fraud." },
+      { label: "Offer only your own hands", standing: 1, resultText: "Honest, if less dazzling. The court respects the modesty." },
+    ],
+  },
+  {
+    id: "satire",
+    name: "A Satirical Ballad",
+    flavor: "A pasquil circulates in the town, mocking the patron for staking 'land, people, honor, body, life, and blood' on you: 'the knaves belong on the gallows.'",
+    source: "Nummedal, Zieglerin, ch.6 (the Spottlied)",
+    options: [
+      { label: "Buy off the printers (spend 3 Gold)", requires: { gold: 3 }, resultText: "The sheets are bought up and burned before they spread." },
+      { label: "Endure the mockery", suspicion: 3, resultText: "The ballad spreads; public scorn feeds the court's doubt." },
+    ],
+  },
+  {
+    id: "gift",
+    name: "A Chance to Curry Favor",
+    flavor: "A small gift, well-timed — a sewn shirt, Spanish boots for the young princes — can warm a court, as Anna's did.",
+    source: "Nummedal, Zieglerin, ch.3",
+    options: [
+      { label: "Send a thoughtful gift (spend 2 Gold)", requires: { gold: 2 }, standing: 2, resultText: "The gesture lands; the patron warms to you." },
+      { label: "Save your coin", resultText: "You keep your purse; the chance passes." },
+    ],
+  },
+  {
+    id: "scandal",
+    name: "A Precedent Scandal",
+    flavor: "Talk reaches the court of an alchemist executed for poison — Lippold in Berlin, Grumbach at Gotha — and the patron grows wary of your kind.",
+    source: "Nummedal, Zieglerin, ch.6",
+    options: [
+      { label: "Distance yourself loudly", standing: -1, resultText: "You disavow the frauds; costly to your pride, but the taint does not stick." },
+      { label: "Say nothing", suspicion: 1, denunciationBonus: 1, resultText: "The precedent lingers — every future denunciation now bites harder." },
+    ],
+  },
+  {
+    id: "defection",
+    name: "A Rival Court Beckons",
+    flavor: "An envoy from a rival prince offers gold to leave your patron's service and bring your secrets elsewhere.",
+    source: "Nummedal / Prinke, on alchemists cycling between patrons",
+    options: [
+      { label: "Take the gold, stay quiet", gain: { gold: 3 }, suspicion: 2, resultText: "You pocket the coin — but word of the envoy reaches the court, and reneging on a prince is prosecutable." },
+      { label: "Refuse, and report it", standing: 1, resultText: "Your loyalty, made visible, earns the patron's trust." },
+    ],
+  },
+];
+
+export const COURT_EVENT_BY_ID = new Map(COURT_EVENTS.map((e) => [e.id, e]));
 
 // Suspicion tuning (see docs/PATRONAGE_PLAN.md §3.3–3.4).
 export const SUSPICION = {

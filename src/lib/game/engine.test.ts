@@ -24,6 +24,7 @@ function withTiles(seed: number, ...tiles: GameState["furniture"]): GameState {
 /** Advance through a full round with both workers gathering, always preventing if possible. */
 function playSafeRound(state: GameState): GameState {
   let s = state;
+  if (s.phase === "courtEvent") return reduce(s, { type: "resolveEvent", optionIndex: 0 });
   const free = s.workers.filter((w) => canWork(w) && w.placedOn === null);
   if (free[0]) s = reduce(s, { type: "placeWorker", workerId: free[0].id, tileId: "workbench" });
   if (free[1]) s = reduce(s, { type: "placeWorker", workerId: free[1].id, tileId: "alembic" });
@@ -486,5 +487,50 @@ describe("patronage layer (v2.0)", () => {
       if (simulateArchetype(seed, "production", "rozmberk") < 8) rozmberkLosses++;
     }
     expect(friedrichLosses).toBeGreaterThanOrEqual(rozmberkLosses);
+  });
+});
+
+describe("court events (v2.1)", () => {
+  it("fires a court event at an event round, awaiting a choice", () => {
+    let s = newGame(1, "julius");
+    let guard = 0;
+    // Play rounds passively until a court event appears (event rounds are 3 and 6).
+    while (s.phase !== "courtEvent" && s.phase !== "gameOver" && guard++ < 40) {
+      if (s.phase === "placement") s = reduce(s, { type: "confirmPlacement" });
+      else if (s.phase === "disaster") s = reduce(s, { type: "resolveDisaster", prevent: s.pendingDisaster?.canPrevent ?? false });
+      else if (s.phase === "healing") s = reduce(s, { type: "endHealing" });
+    }
+    expect(s.phase).toBe("courtEvent");
+    expect(s.pendingEvent).not.toBeNull();
+    expect([3, 6]).toContain(s.round);
+  });
+
+  it("resolving an event applies its effect and returns to placement", async () => {
+    const { COURT_EVENT_BY_ID } = await import("./data");
+    let s = newGame(1, "julius");
+    // Inject a known event to test a suspicion-raising option deterministically.
+    s.phase = "courtEvent";
+    s.pendingEvent = "greaterAdept"; // option 0: +3 standing, +3 suspicion
+    const ev = COURT_EVENT_BY_ID.get("greaterAdept")!;
+    expect(ev.options[0].suspicion).toBe(3);
+    const standingBefore = s.standing;
+    s = reduce(s, { type: "resolveEvent", optionIndex: 0 });
+    expect(s.phase).toBe("placement");
+    expect(s.pendingEvent).toBeNull();
+    expect(s.standing).toBe(standingBefore + 3);
+    expect(s.suspicion).toBe(3);
+  });
+
+  it("an option's resource requirement is enforced", () => {
+    const s = newGame(1, "julius");
+    s.phase = "courtEvent";
+    s.pendingEvent = "satire"; // option 0 requires 3 gold
+    s.resources.gold = 0;
+    const blocked = reduce(s, { type: "resolveEvent", optionIndex: 0 });
+    expect(blocked).toBe(s); // cannot afford → no-op
+    // the free option (endure) is always allowed
+    const endured = reduce(s, { type: "resolveEvent", optionIndex: 1 });
+    expect(endured.phase).toBe("placement");
+    expect(endured.suspicion).toBe(3);
   });
 });

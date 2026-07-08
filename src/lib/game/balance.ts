@@ -138,7 +138,7 @@ export function grandExperimentEv(vMed = 1.5): number {
 // archetype's median pulls ahead, the build costs in data.ts are mispriced — the
 // parity spread is the objective function to minimize when tuning.
 
-import { BASE_BUILDABLE, BUILD_COST, COMMISSION_BY_ID, PATRON_BY_ID, WIN_VP } from "./data";
+import { BASE_BUILDABLE, BUILD_COST, COMMISSION_BY_ID, COURT_EVENT_BY_ID, PATRON_BY_ID, WIN_VP } from "./data";
 import { canWork, newGame, reduce } from "./engine";
 import type { FurnitureId, GameState, PatronId } from "./types";
 
@@ -185,6 +185,18 @@ export function simulateArchetype(seed: number, arch: Archetype, patron: PatronI
   const threshold = PATRON_BY_ID.get(patron)!.suspicionThreshold;
   let guard = 0;
   while (s.phase !== "gameOver" && guard++ < 60) {
+    // Court event: pick the affordable option that least raises suspicion.
+    if (s.phase === "courtEvent" && s.pendingEvent) {
+      const ev = COURT_EVENT_BY_ID.get(s.pendingEvent)!;
+      let bestIdx = 0, bestSusp = Infinity;
+      ev.options.forEach((o, i) => {
+        const affordable = !o.requires || (Object.entries(o.requires) as [keyof typeof s.resources, number][]).every(([k, v]) => s.resources[k] >= v);
+        const susp = o.suspicion ?? 0;
+        if (affordable && susp < bestSusp) { bestSusp = susp; bestIdx = i; }
+      });
+      s = reduce(s, { type: "resolveEvent", optionIndex: bestIdx });
+      continue;
+    }
     // Manage the court: if suspicion is near boiling over, a worker seeks audience.
     if (s.suspicion >= threshold - 2 && s.vp < PATRON_BY_ID.get(patron)!.quota - 1) {
       const cw = s.workers.find((w) => canWork(w) && w.placedOn === null && !w.exhausted);

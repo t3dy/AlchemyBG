@@ -7,7 +7,14 @@ the rival court's denunciations, seek an Audience to calm the court, and — if 
 crosses the patron's threshold or the deadline lapses — face a graded **Trial** (exile if
 your standing holds, execution if not). See `data.ts` (PATRONS), `engine.ts` (suspicion /
 trial / stipend), and the balance harness (patron-aware sims). Phases B–D below
-(interrogation mini-game, precedent-scandal cards, multi-patron web) remain future work.
+(interrogation mini-game, multi-patron web, three-persona scoring) remain future work.
+
+**v2.1** adds Phase B's **court-event deck**: seven ruler-interaction cards fired at the
+start of set rounds (patron meddling, a demonstration demanded, the lure of a greater
+adept "Count Carl," the satirical ballad/*Spottlied*, a gift to curry favor, a precedent
+scandal that makes future denunciations bite harder, and a rival court's defection offer)
+— each a real choice trading standing, suspicion, and resources. See `data.ts`
+(COURT_EVENTS) and the `courtEvent` phase.
 
 Grounded in Tara Nummedal,
 *Anna Zieglerin and the Lion's Blood* (2019) and *Alchemy and Authority in the Holy

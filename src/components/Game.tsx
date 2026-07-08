@@ -5,6 +5,7 @@ import {
   BASE_BUILDABLE,
   BUILD_COST,
   COMMISSION_BY_ID,
+  COURT_EVENT_BY_ID,
   FURNITURE,
   GRAND_TRANSMUTATION_ROUND,
   MAX_ROUNDS,
@@ -564,6 +565,48 @@ export default function Game() {
           </div>
         </aside>
       </div>
+
+      {/* Court event modal (v2.1) — a ruler interaction with a real choice */}
+      {s.phase === "courtEvent" && s.pendingEvent && (() => {
+        const ev = COURT_EVENT_BY_ID.get(s.pendingEvent!)!;
+        return (
+          <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/70 p-4">
+            <div className="w-full max-w-md rounded-2xl border-4 border-purple-800 bg-stone-950 p-5 shadow-2xl">
+              <p className="text-xs font-bold uppercase tracking-widest text-purple-400">At court · {patron.name}</p>
+              <h3 className="mt-1 font-serif text-2xl font-bold text-purple-200">🏛️ {ev.name}</h3>
+              <p className="mt-2 text-sm italic text-stone-300">{ev.flavor}</p>
+              <div className="mt-4 flex flex-col gap-2">
+                {ev.options.map((opt, i) => {
+                  const affordable = !opt.requires || canAfford(s.resources, opt.requires);
+                  const chips = [
+                    opt.standing ? `${opt.standing > 0 ? "+" : ""}${opt.standing} standing` : "",
+                    opt.suspicion ? `${opt.suspicion > 0 ? "+" : ""}${opt.suspicion} suspicion` : "",
+                    opt.requires ? `−${costText(opt.requires)}` : "",
+                    opt.gain ? `+${costText(opt.gain)}` : "",
+                    opt.denunciationBonus ? "denunciations bite harder" : "",
+                  ].filter(Boolean).join(" · ");
+                  return (
+                    <button
+                      key={i}
+                      disabled={!affordable}
+                      onClick={() => dispatchAndClear({ type: "resolveEvent", optionIndex: i })}
+                      className={`rounded-xl border-2 px-4 py-2 text-left ${
+                        affordable
+                          ? "border-purple-700 bg-purple-950/50 text-purple-100 hover:bg-purple-900"
+                          : "border-stone-700 bg-stone-900 text-stone-500"
+                      }`}
+                    >
+                      <span className="font-semibold">{opt.label}</span>
+                      {chips && <span className="block text-[11px] text-stone-400">{chips}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-3 text-[10px] italic text-stone-500">📖 {ev.source}</p>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Disaster modal — prevention cost always shown BEFORE the effect applies */}
       {s.phase === "disaster" && s.pendingDisaster && (

@@ -96,6 +96,7 @@ export interface ResearchUpgrade {
 
 export type Phase =
   | "patronSelect" // choose your patron before the work begins
+  | "courtEvent"   // a ruler-interaction card awaits a choice (start of some rounds)
   | "placement"   // assign workers to furniture
   | "disaster"    // a disaster card is revealed; player chooses prevent / accept
   | "healing"     // spend medicine to heal workers
@@ -133,6 +134,28 @@ export interface Patron {
 }
 
 export type TrialOutcome = "exile" | "execution" | null;
+
+// Court events (v2.1): ruler-interaction cards fired between rounds, each a real choice.
+export interface CourtEventOption {
+  label: string;
+  /** Resources that must be affordable to pick this option (and are then spent). */
+  requires?: Partial<Resources>;
+  standing?: number;
+  suspicion?: number;
+  /** Resources granted (positive) on top of any `requires` spend. */
+  gain?: Partial<Resources>;
+  /** Permanently increases the bite of future denunciations (a precedent scandal). */
+  denunciationBonus?: number;
+  resultText: string;
+}
+
+export interface CourtEvent {
+  id: string;
+  name: string;
+  flavor: string;
+  source: string;
+  options: CourtEventOption[];
+}
 
 export interface LogEntry {
   round: number;
@@ -176,6 +199,9 @@ export interface GameState {
   standing: number;          // court favor; high standing softens a Trial to exile
   suspicion: number;         // court distrust; crossing the threshold triggers a Trial
   seekingAudience: boolean;  // a worker is currying favor this round (set in placement)
+  courtEventDeck: string[];  // shuffled court-event ids; fired on set rounds
+  pendingEvent: string | null; // a court event awaiting the player's choice
+  denunciationBonus: number; // lingering extra bite on denunciations (from a scandal)
   trialOutcome: TrialOutcome;
   log: LogEntry[];
   outcome: "won" | "lost" | null;
@@ -193,5 +219,6 @@ export type GameAction =
   | { type: "attemptGrandExperiment"; workerId: string }  // rounds 9-10 gamble, from placement phase
   | { type: "seekAudience"; workerId: string }   // spend a worker at court: -Suspicion, +Standing
   | { type: "cancelAudience" }
+  | { type: "resolveEvent"; optionIndex: number } // pick a court-event option
   | { type: "choosePatron"; patron: PatronId }   // from patronSelect phase
   | { type: "newGame"; seed?: number; patron?: PatronId };

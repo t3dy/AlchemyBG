@@ -20,6 +20,9 @@ import {
   PATRON_BY_ID,
   DEFAULT_PATRON,
   SUSPICION,
+  COURT_EVENTS,
+  COURT_EVENT_BY_ID,
+  EVENT_ROUNDS,
 } from "./data";
 import type {
   DisasterCard,
@@ -151,6 +154,9 @@ export function newGame(
     standing: 0,
     suspicion: 0,
     seekingAudience: false,
+    courtEventDeck: [],
+    pendingEvent: null,
+    denunciationBonus: 0,
     trialOutcome: null,
     log: [],
     outcome: null,
@@ -179,6 +185,7 @@ export function newGame(
   const cata = shuffled(state, DISASTERS.filter((d) => d.severity === "catastrophic").map((d) => d.id));
   state.disasterDeck = [...minor, ...major, ...cata.slice(0, MAX_ROUNDS - minor.length - major.length)];
   state.commissionDeck = shuffled(state, COMMISSIONS.map((c) => c.id));
+  state.courtEventDeck = shuffled(state, COURT_EVENTS.map((e) => e.id));
   if (patron) applyPatronSetup(state, patron);
   return state;
 }
@@ -523,7 +530,15 @@ function runUpkeep(state: GameState): void {
   log(state, { phase: "placement", tone: "neutral", text: `— Round ${state.round} —` });
   grantStipend(state);
   if (state.round % p.denunciationEvery === 0) {
-    raiseSuspicion(state, p.denunciationAmount, `${p.court}'s rival network denounces you`);
+    raiseSuspicion(state, p.denunciationAmount + state.denunciationBonus, `${p.court}'s rival network denounces you`);
+  }
+  // A court event may await a choice at the start of set rounds.
+  if (EVENT_ROUNDS.includes(state.round) && state.courtEventDeck.length > 0) {
+    state.pendingEvent = state.courtEventDeck.shift()!;
+    const ev = COURT_EVENT_BY_ID.get(state.pendingEvent)!;
+    log(state, { phase: "upkeep", tone: "neutral", text: `At court: ${ev.name}.` });
+    state.phase = "courtEvent";
+    return;
   }
   state.phase = "placement";
 }
@@ -571,6 +586,24 @@ export function reduce(prev: GameState, action: GameAction): GameState {
 
     case "cancelAudience": {
       return prev; // audiences resolve immediately; nothing to cancel
+    }
+
+    case "resolveEvent": {
+      if (state.phase !== "courtEvent" || !state.pendingEvent) return prev;
+      const ev = COURT_EVENT_BY_ID.get(state.pendingEvent);
+      const opt = ev?.options[action.optionIndex];
+      if (!ev || !opt) return prev;
+      if (opt.requires && !canAfford(state.resources, opt.requires)) return prev;
+      if (opt.requires) state.resources = pay(state.resources, opt.requires);
+      if (opt.gain) for (const [k, v] of Object.entries(opt.gain) as [keyof Resources, number][]) state.resources[k] += v;
+      if (opt.standing) state.standing = Math.max(0, state.standing + opt.standing);
+      if (opt.denunciationBonus) state.denunciationBonus += opt.denunciationBonus;
+      if (opt.suspicion && opt.suspicion > 0) raiseSuspicion(state, opt.suspicion, ev.name.toLowerCase());
+      else if (opt.suspicion && opt.suspicion < 0) state.suspicion = Math.max(0, state.suspicion + opt.suspicion);
+      log(state, { phase: "upkeep", tone: opt.suspicion && opt.suspicion > 0 ? "bad" : "good", text: `${ev.name}: ${opt.resultText}` });
+      state.pendingEvent = null;
+      state.phase = "placement";
+      return state;
     }
 
     case "buildTile": {
