@@ -19,6 +19,52 @@
     ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
   }
 
+  // ---- Tiny pixel-art sprite engine ---------------------------------------
+  // Sprites are char-grids; each glyph indexes a palette. '.'/' ' = transparent.
+  // Drawn with integer coords and no smoothing for a crisp pixel look.
+  function drawSprite(ctx, rows, pal, cx, footY, scale) {
+    const w = rows[0].length, h = rows.length;
+    const x0 = Math.round(cx - (w * scale) / 2);
+    const y0 = Math.round(footY - h * scale);
+    const s = Math.ceil(scale);
+    for (let r = 0; r < h; r++) {
+      const row = rows[r];
+      for (let c = 0; c < row.length; c++) {
+        const g = row[c];
+        if (g === '.' || g === ' ') continue;
+        const col = pal[g];
+        if (!col) continue;
+        ctx.fillStyle = col;
+        ctx.fillRect(x0 + c * scale | 0, y0 + r * scale | 0, s, s);
+      }
+    }
+  }
+
+  // Classic garden-gnome: big pointy hat, round nose, huge beard, little boots.
+  const GNOME = [
+    '......HH......',
+    '.....HHHH.....',
+    '....HHHHHH....',
+    '...HHHHHHHH...',
+    '..HHHHHHHHHH..',
+    '.HHHHHHHHHHHH.',
+    '.hhhhhhhhhhhh.',
+    '...BBBBBBBB...',
+    '..BBEBBBBEBB..',
+    '..BBBBNNBBBB..',
+    '..BBBNNNNBBB..',
+    '.BBBBBBBBBBBB.',
+    '.BBBBBBBBBBBB.',
+    '..BBBBBBBBBB..',
+    '...LL....LL...',
+    '...LL....LL...',
+  ];
+  const GNOME_PAL = { H: '#d8352a', h: '#9e241c', B: '#eef0f0', b: '#c2c6cc',
+    N: '#f0b98a', E: '#231017', L: '#4a3728' };
+  // Homunculus: same silhouette, sickly-green palette (a glass dome is added over it).
+  const HOM_PAL = { H: '#63c873', h: '#39824c', B: '#d6efd6', b: '#a6cfa6',
+    N: '#bfe39a', E: '#14300f', L: '#3a5a2a' };
+
   // ---- Layout: where everything sits (shared by draw + hitTest) -----------
   function layout(state) {
     const tempMax = state.furnaces[0] ? 138 : 138;
@@ -78,6 +124,7 @@
   function draw(ctx, state, opts) {
     opts = opts || {};
     const L = layout(state);
+    ctx.imageSmoothingEnabled = false; // crisp pixel-art scaling
     ctx.clearRect(0, 0, W, H);
 
     // Background stone wall + floor.
@@ -147,8 +194,24 @@
 
     // Furnace body + flame.
     const bx = cx - 60, by = 300, bw = 120, bh = 90;
-    ctx.fillStyle = '#3a2b22'; rrect(ctx, bx, by, bw, bh, 8); ctx.fill();
-    ctx.strokeStyle = '#20160f'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.save();
+    rrect(ctx, bx, by, bw, bh, 8); ctx.fillStyle = '#3a2318'; ctx.fill(); ctx.clip();
+    // Brick courses (pixel-art masonry), offset every other row.
+    const brW = 24, brH = 12;
+    for (let ry = 0, row = 0; ry < bh; ry += brH, row++) {
+      const off = row % 2 ? -brW / 2 : 0;
+      for (let rx = -brW; rx < bw + brW; rx += brW) {
+        const px = bx + rx + off, py = by + ry;
+        ctx.fillStyle = (row + (rx / brW | 0)) % 3 ? '#6e4130' : '#7d4a35';
+        ctx.fillRect(px + 1, py + 1, brW - 2, brH - 2);
+        ctx.fillStyle = '#8a5640'; ctx.fillRect(px + 1, py + 1, brW - 2, 2); // top highlight
+      }
+    }
+    ctx.restore();
+    ctx.strokeStyle = '#20160f'; ctx.lineWidth = 3; rrect(ctx, bx, by, bw, bh, 8); ctx.stroke();
+    // dark hearth opening the flame sits inside
+    ctx.fillStyle = '#180d07';
+    rrect(ctx, bx + 15, by + 28, bw - 30, bh - 30, 7); ctx.fill();
     // mouth glow
     const heat = clamp(f.temp / 100, 0, 1.3);
     const fg = ctx.createLinearGradient(0, by + bh, 0, by + 20);
@@ -219,55 +282,47 @@
 
   function drawWorker(ctx, state, w, L, selected) {
     const pos = L.workers.find((p) => p.id === w.id);
-    const x = pos.x, y = pos.y;
     const ko = w.ko > 0;
     const hom = w.kind === 'homunculus';
+    const scale = 2.4, sw = GNOME[0].length * scale, sh = GNOME.length * scale;
+    const wob = hom && !ko ? Math.sin(state.t * 16 + w.id) * 2 : 0;
+    const x = pos.x + wob;
+    const footY = pos.y + 24;          // sprite stands with boots near here
+    const cy = footY - sh / 2;
 
-    if (selected === w.id) {
+    if (selected === w.id) {           // selection halo
       ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(x, y - 4, 26, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(pos.x, cy, sw * 0.7, 0, Math.PI * 2); ctx.stroke();
     }
 
-    ctx.save();
-    ctx.translate(x, y);
-    if (hom) ctx.translate(Math.sin(state.t * 16 + w.id) * 2, 0); // wobble
-    if (ko) ctx.rotate(Math.PI / 2 * 0.6);
-
-    // legs
-    ctx.strokeStyle = hom ? '#5a8f5a' : '#5a4634'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(-6, 12); ctx.lineTo(-6, 22);
-    ctx.moveTo(6, 12); ctx.lineTo(6, 22); ctx.stroke();
-    // body
-    ctx.fillStyle = hom ? 'rgba(120,220,150,0.85)' : '#b9642e';
-    ctx.beginPath(); ctx.arc(0, 2, 14, 0, Math.PI * 2); ctx.fill();
-    // hat
-    ctx.fillStyle = hom ? '#6fe08a' : '#d23b2e';
-    ctx.beginPath(); ctx.moveTo(-13, -6); ctx.lineTo(13, -6); ctx.lineTo(0, -30);
-    ctx.closePath(); ctx.fill();
-    // face
-    ctx.fillStyle = '#1a1016';
-    if (ko) {
-      ctx.font = 'bold 11px system-ui'; ctx.textAlign = 'center';
-      ctx.fillText('✕ ✕', 0, 2);
+    if (ko) {                          // knocked out: tip the sprite over, X eyes
+      ctx.save(); ctx.translate(x, cy); ctx.rotate(1.3);
+      drawSprite(ctx, GNOME, hom ? HOM_PAL : GNOME_PAL, 0, sh / 2, scale);
+      ctx.restore();
+      ctx.fillStyle = '#ff5555'; ctx.font = 'bold 12px system-ui'; ctx.textAlign = 'center';
+      ctx.fillText('✕✕', x, cy - 2);
     } else {
-      ctx.beginPath(); ctx.arc(-5, 0, 2, 0, 6.3); ctx.arc(5, 0, 2, 0, 6.3); ctx.fill();
-      if (w.winded) { ctx.fillStyle = '#7fd0ff';   // sweat
-        ctx.beginPath(); ctx.arc(11, -2, 2.5, 0, 6.3); ctx.fill(); }
-    }
-    ctx.restore();
-
-    // status bars under the worker
-    if (!ko) {
-      if (hom) {
-        bar(ctx, x - 16, y + 26, 32, 4, w.destabilize / 100, '#a06bff', '#2a1840');
-      } else {
-        bar(ctx, x - 16, y + 26, 32, 4, w.stamina / 100,
-          w.winded ? '#ff7a1a' : '#7fd0ff', '#20303a');
+      drawSprite(ctx, GNOME, hom ? HOM_PAL : GNOME_PAL, x, footY, scale);
+      if (hom) {                       // glass dome over the homunculus
+        ctx.strokeStyle = 'rgba(190,230,255,0.65)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x, cy - 2, sw * 0.52, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke();
       }
+      if (w.winded) {                  // sweat bead
+        ctx.fillStyle = '#7fd0ff';
+        ctx.beginPath(); ctx.arc(x + sw * 0.4, cy - sh * 0.15, 3, 0, 6.3); ctx.fill();
+      }
+    }
+
+    // status bars + name
+    const by = footY + 4;
+    if (!ko) {
+      if (hom) bar(ctx, pos.x - 16, by, 32, 4, w.destabilize / 100, '#b57bff', '#2a1840');
+      else bar(ctx, pos.x - 16, by, 32, 4, w.stamina / 100,
+        w.winded ? '#ff7a1a' : '#7fd0ff', '#20303a');
     }
     ctx.fillStyle = ko ? '#ff6b6b' : '#cbb8cb';
     ctx.font = '10px system-ui'; ctx.textAlign = 'center';
-    ctx.fillText(ko ? `KO ${w.ko.toFixed(0)}s` : w.name, x, y + 40);
+    ctx.fillText(ko ? `KO ${w.ko.toFixed(0)}s` : w.name, pos.x, by + 14);
   }
 
   function bar(ctx, x, y, w, h, frac, fg, bg) {
