@@ -15,6 +15,7 @@ import {
   RECIPES,
 } from "@/lib/game/data";
 import { canAfford, canWork, newGame, reduce } from "@/lib/game/engine";
+import { dailyInfo as computeDailyInfo } from "@/lib/daily";
 import type {
   FurnitureId,
   GameState,
@@ -164,16 +165,13 @@ export default function Game() {
     setRecipePickerOpen(false);
   }
 
-  async function startDaily() {
-    try {
-      const res = await fetch("/api/daily");
-      const info = (await res.json()) as { date: string; seed: number };
-      setDailyInfo(info);
-      setState(newGame(info.seed));
-      setSelectedWorker(null);
-    } catch {
-      /* offline — regular new game still works */
-    }
+  function startDaily() {
+    // Computed locally — the seed is a pure function of today's UTC date, so
+    // every player still gets the same deck without a server round-trip.
+    const info = computeDailyInfo();
+    setDailyInfo(info);
+    setState(newGame(info.seed));
+    setSelectedWorker(null);
   }
 
   function startNew() {

@@ -5,6 +5,8 @@
 Solo digital prototype of Ted's alchemy board game, realized as a full-stack Next.js
 website for deployment to GitHub + Vercel. Vertical slice complete and playable.
 
+> Also inherits `C:\Dev\CLAUDE.md`'s **Working Discipline** (verify-before-done, no secrets in chat, log decisions to a file, checkpoint long jobs) even where this file doesn't restate it.
+
 ## Read first, by task
 
 - **Game rules / balance / new content** → `docs/DESIGN.md` (the design bible, distilled
